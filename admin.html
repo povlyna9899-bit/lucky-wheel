@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard Pro</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,sans-serif}
+
+body{background:#f1f5f9;transition:.3s;}
+.dark{background:#0f172a;color:white;}
+
+.layout{display:flex;min-height:100vh}
+
+/* Sidebar */
+.sidebar{
+  width:240px;
+  background:#1e293b;
+  color:white;
+  padding:25px;
+}
+
+.sidebar h2{margin-bottom:20px}
+.sidebar button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.logout{background:#ef4444;color:white}
+.toggle{background:#2563eb;color:white}
+
+/* Main */
+.main{flex:1;padding:40px}
+
+.card{
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 5px 15px rgba(0,0,0,.08);
+  margin-bottom:25px;
+}
+
+.dark .card{background:#1e293b;color:white;}
+
+input{
+  width:100%;
+  padding:8px;
+  margin-bottom:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+.btn{
+  padding:8px 15px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.primary{background:#2563eb;color:white}
+.danger{background:#ef4444;color:white}
+.edit{background:#f59e0b;color:white}
+
+table{width:100%;border-collapse:collapse;}
+th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
+.dark th,.dark td{border-color:#334155;}
+
+.modal{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,.5);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content{
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  width:300px;
+}
+
+.dark .modal-content{background:#1e293b;}
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+<div class="sidebar">
+  <h2>Admin Panel</h2>
+  <button class="toggle" onclick="toggleDark()">Toggle Dark</button>
+  <button class="logout" onclick="logout()">Logout</button>
+</div>
+
+<div class="main">
+
+<h1>Dashboard</h1>
+<p>Total Players: <b id="totalCount">0</b></p>
+
+<div class="card">
+  <h3>Create Player</h3>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
+  <button class="btn primary" onclick="createPlayer()">Create</button>
+</div>
+
+<div class="card">
+  <h3>Player List</h3>
+  <input type="text" id="search" placeholder="Search..." onkeyup="filterPlayers()">
+
+  <table>
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="playerTable"></tbody>
+  </table>
+</div>
+
+</div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <h3>Edit Player</h3>
+    <input type="text" id="editUsername">
+    <input type="password" id="editPassword" placeholder="New Password">
+    <button class="btn primary" onclick="updatePlayer()">Save</button>
+  </div>
+</div>
+
+<script>
+
+const token = localStorage.getItem("adminToken");
+if(!token) window.location.href="/admin-login.html";
+
+let playersData = [];
+let editingId = "";
+
+/* =====================
+   CREATE PLAYER
+===================== */
+async function createPlayer(){
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/create-player",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+token
+    },
+    body:JSON.stringify({username,password})
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    loadPlayers();
+  } else {
+    alert(data.message);
+  }
+}
+
+
+/* =====================
+   LOAD PLAYERS
+===================== */
+async function loadPlayers(){
+  const res = await fetch("/players",{
+    headers:{Authorization:"Bearer "+token}
+  });
+
+  playersData = await res.json();
+  renderTable(playersData);
+}
+
+
+/* =====================
+   RENDER TABLE
+===================== */
+function renderTable(data){
+  const table = document.getElementById("playerTable");
+  table.innerHTML = "";
+
+  document.getElementById("totalCount").innerText = data.length;
+
+  data.forEach(p=>{
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${p.username}</td>
+      <td>
+        <button class="btn edit" onclick="openEdit('${p._id}','${p.username}')">Edit</button>
+        <button class="btn danger" onclick="deletePlayer('${p._id}')">Delete</button>
+      </td>
+    `;
+    table.appendChild(row);
+  });
+}
+
+
+/* =====================
+   SEARCH
+===================== */
+function filterPlayers(){
+  const keyword = document.getElementById("search").value.toLowerCase();
+  const filtered = playersData.filter(p =>
+    p.username.toLowerCase().includes(keyword)
+  );
+  renderTable(filtered);
+}
+
+
+/* =====================
+   DELETE PLAYER
+===================== */
+async function deletePlayer(id){
+  if(!confirm("Delete this player?")) return;
+
+  const res = await fetch(`/delete/${id}`, {
+    method:"DELETE",
+    headers:{
+      "Authorization":"Bearer "+token
+    }
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    loadPlayers();
+  } else {
+    alert("Delete failed");
+  }
+}
+
+
+/* =====================
+   OPEN EDIT MODAL
+===================== */
+function openEdit(id, username){
+  editingId = id;
+  document.getElementById("editUsername").value = username;
+  document.getElementById("editPassword").value = "";
+  document.getElementById("editModal").style.display = "flex";
+}
+
+
+/* =====================
+   UPDATE PLAYER
+===================== */
+async function updatePlayer(){
+  const username = document.getElementById("editUsername").value;
+  const password = document.getElementById("editPassword").value;
+
+  const res = await fetch(`/edit-player/${editingId}`,{
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+token
+    },
+    body:JSON.stringify({username,password})
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    document.getElementById("editModal").style.display = "none";
+    loadPlayers();
+  } else {
+    alert("Update failed");
+  }
+}
+
+
+/* =====================
+   DARK MODE
+===================== */
+function toggleDark(){
+  document.body.classList.toggle("dark");
+}
+
+
+/* =====================
+   LOGOUT
+===================== */
+function logout(){
+  localStorage.removeItem("adminToken");
+  window.location.href="/admin-login.html";
+}
+
+
+/* INIT */
+loadPlayers();
+
+</script>
+</body>
+</html>

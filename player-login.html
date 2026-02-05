@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ultra Casino Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Particles Library -->
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Segoe UI',sans-serif;
+}
+
+body{
+  height:100vh;
+  overflow:hidden;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+}
+
+/* Particles Background */
+#particles-js{
+  position:absolute;
+  width:100%;
+  height:100%;
+  z-index:0;
+}
+
+/* Glass Card */
+.box{
+  position:relative;
+  z-index:2;
+  width:400px;
+  padding:45px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(20px);
+  box-shadow:0 0 60px rgba(255,215,0,0.5);
+  text-align:center;
+  color:white;
+  animation:fadeIn 1s ease;
+}
+
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(30px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+h2{
+  margin-bottom:30px;
+  font-weight:600;
+  color:#ffd700;
+  text-shadow:0 0 15px #ffd700;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  margin:12px 0;
+  border-radius:10px;
+  border:none;
+  outline:none;
+  font-size:14px;
+  background:rgba(255,255,255,0.15);
+  color:white;
+  transition:0.3s;
+}
+
+input:focus{
+  box-shadow:0 0 15px #ffd700;
+}
+
+.password-box{
+  position:relative;
+}
+
+.toggle{
+  position:absolute;
+  right:15px;
+  top:16px;
+  cursor:pointer;
+  font-size:13px;
+  color:#ffd700;
+}
+
+/* 3D Casino Button */
+button{
+  width:100%;
+  padding:16px;
+  margin-top:20px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:bold;
+  background:linear-gradient(45deg,#ffd700,#ff9900);
+  color:black;
+  cursor:pointer;
+  transition:0.2s;
+  box-shadow:
+    0 5px 0 #cc8400,
+    0 0 20px #ffd700;
+}
+
+button:hover{
+  transform:translateY(-3px);
+  box-shadow:
+    0 8px 0 #cc8400,
+    0 0 35px #ffd700;
+}
+
+button:active{
+  transform:translateY(5px);
+  box-shadow:
+    0 2px 0 #cc8400,
+    0 0 10px #ffd700;
+}
+
+.error{
+  margin-top:12px;
+  color:#ff4d4d;
+  font-size:13px;
+}
+
+.loading{
+  margin-top:10px;
+  font-size:13px;
+  color:#ccc;
+}
+</style>
+</head>
+
+<body>
+
+<div id="particles-js"></div>
+
+<div class="box">
+  <h2>🎰 Ultra Casino Login</h2>
+
+  <input type="text" id="username" placeholder="Username">
+
+  <div class="password-box">
+    <input type="password" id="password" placeholder="Password">
+    <span class="toggle" onclick="togglePassword()">Show</span>
+  </div>
+
+  <button onclick="login()" id="btn">ENTER CASINO</button>
+
+  <div class="loading" id="loading"></div>
+  <div class="error" id="error"></div>
+</div>
+
+<!-- Sound Effect -->
+<audio id="hoverSound" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.wav"></audio>
+
+<script>
+/* Particles Config */
+particlesJS("particles-js",{
+  particles:{
+    number:{value:80},
+    color:{value:"#ffd700"},
+    shape:{type:"circle"},
+    opacity:{value:0.6},
+    size:{value:3},
+    line_linked:{enable:true,color:"#ffd700"},
+    move:{enable:true,speed:2}
+  }
+});
+
+/* Hover Sound */
+const btn=document.getElementById("btn");
+const hoverSound=document.getElementById("hoverSound");
+
+btn.addEventListener("mouseenter",()=>{
+  hoverSound.currentTime=0;
+  hoverSound.play();
+});
+
+/* Password Toggle */
+function togglePassword(){
+  const pass=document.getElementById("password");
+  const toggle=document.querySelector(".toggle");
+
+  if(pass.type==="password"){
+    pass.type="text";
+    toggle.innerText="Hide";
+  }else{
+    pass.type="password";
+    toggle.innerText="Show";
+  }
+}
+
+/* Auto Redirect */
+const token=localStorage.getItem("playerToken");
+if(token){
+  window.location.href="/player";
+}
+
+/* Login */
+async function login(){
+  const username=document.getElementById("username").value;
+  const password=document.getElementById("password").value;
+  const error=document.getElementById("error");
+  const loading=document.getElementById("loading");
+
+  error.innerText="";
+  loading.innerText="Checking...";
+
+  try{
+    const res=await fetch("/player/login",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username,password})
+    });
+
+    const data=await res.json();
+
+    if(data.success){
+      localStorage.setItem("playerToken",data.token);
+      window.location.href="/player";
+    }else{
+      error.innerText="❌ Invalid Login";
+    }
+  }catch{
+    error.innerText="⚠️ Server Error";
+  }
+
+  loading.innerText="";
+}
+</script>
+
+</body>
+</html>

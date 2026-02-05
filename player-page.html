@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Player Dashboard</title>
+
+<style>
+body{
+  margin:0;
+  font-family: 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #1b2735, #090a0f);
+  color:white;
+  overflow-x:hidden;
+}
+
+/* TOP BAR */
+.topbar{
+  width:100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  padding:15px 30px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-sizing:border-box;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.menu-btn{
+  font-size:22px;
+  cursor:pointer;
+  transition:0.3s;
+}
+.menu-btn:hover{
+  color:gold;
+}
+
+.username{
+  font-weight:bold;
+  color:#00ffcc;
+}
+
+/* SIDEBAR */
+.sidebar{
+  position:fixed;
+  left:-220px;
+  top:0;
+  width:220px;
+  height:100%;
+  background: rgba(0,0,0,0.9);
+  transition:0.3s;
+  padding-top:70px;
+  box-shadow:5px 0 20px rgba(0,0,0,0.5);
+}
+
+.sidebar a{
+  display:block;
+  padding:15px 20px;
+  color:white;
+  text-decoration:none;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  transition:0.3s;
+}
+
+.sidebar a:hover{
+  background:gold;
+  color:black;
+}
+
+.sidebar.active{
+  left:0;
+}
+
+/* CONTENT */
+.content{
+  text-align:center;
+  padding:40px 20px;
+}
+
+/* CARD STYLE */
+#wheelContainer{
+  width:340px;
+  margin:40px auto;
+  padding:20px;
+  background: rgba(255,255,255,0.05);
+  border-radius:20px;
+  box-shadow:0 0 40px rgba(255,215,0,0.2);
+}
+
+canvas{
+  border-radius:50%;
+  border:12px solid gold;
+  box-shadow:0 0 30px gold;
+}
+
+/* SPIN BUTTON */
+button{
+  margin-top:25px;
+  padding:14px 35px;
+  font-size:18px;
+  font-weight:bold;
+  background: linear-gradient(45deg, gold, orange);
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 5px 20px rgba(255,215,0,0.4);
+}
+
+button:hover{
+  transform:scale(1.1);
+  box-shadow:0 8px 30px rgba(255,215,0,0.8);
+}
+
+/* RESULT */
+#result{
+  margin-top:25px;
+  font-size:24px;
+  font-weight:bold;
+  animation: glow 1s infinite alternate;
+}
+
+@keyframes glow{
+  from{ text-shadow:0 0 5px lime; }
+  to{ text-shadow:0 0 20px lime; }
+}
+</style>
+</head>
+<body>
+
+<script>
+/* 🔐 Protect Page */
+const token = localStorage.getItem("playerToken");
+if(!token){
+  window.location.href="/player-login.html";
+}
+</script>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="menu-btn" onclick="toggleMenu()">☰</div>
+  <div>🎉 Player Dashboard</div>
+  <div class="username" id="username"></div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <a href="#" onclick="showGame()">🎡 Spin Game</a>
+  <a href="#" onclick="showHistory()">📜 My History</a>
+  <a href="#" onclick="logout()">🚪 Logout</a>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <div id="gameSection">
+    <h2>Spin & Win</h2>
+    <div id="wheelContainer">
+      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    </div>
+    <button onclick="spinWheel()">🎡 SPIN</button>
+    <div id="result"></div>
+  </div>
+
+  <div id="historySection" style="display:none;">
+    <h2>My Spin History</h2>
+    <div id="historyData">Loading...</div>
+  </div>
+
+</div>
+
+<script>
+const username = localStorage.getItem("playerUser") || "Player";
+document.getElementById("username").innerText = username;
+
+/* MENU */
+function toggleMenu(){
+  document.getElementById("sidebar").classList.toggle("active");
+}
+
+function logout(){
+  localStorage.removeItem("playerUser");
+  localStorage.removeItem("playerToken");
+  window.location.href="/player-login.html";
+}
+
+function showGame(){
+  document.getElementById("gameSection").style.display="block";
+  document.getElementById("historySection").style.display="none";
+}
+
+function showHistory(){
+  document.getElementById("gameSection").style.display="none";
+  document.getElementById("historySection").style.display="block";
+  loadHistory();
+}
+
+/* WHEEL */
+const prizes = ["10$","20$","50$","0$","100$","Try Again"];
+const colors = ["red","blue","green","purple","orange","cyan"];
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+
+let currentDeg = 0;
+let spinning = false;
+
+function drawWheel(){
+  const arc = 2*Math.PI/prizes.length;
+
+  for(let i=0;i<prizes.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(150,150);
+    ctx.fillStyle=colors[i];
+    ctx.arc(150,150,150,i*arc,(i+1)*arc);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(150,150);
+    ctx.rotate(i*arc+arc/2);
+    ctx.fillStyle="white";
+    ctx.fillText(prizes[i],70,5);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+async function spinWheel(){
+  if(spinning) return;
+  spinning=true;
+
+  const randomIndex=Math.floor(Math.random()*prizes.length);
+  const rotateTo=360*5+(360/prizes.length)*randomIndex;
+
+  currentDeg+=rotateTo;
+  canvas.style.transition="transform 4s ease-out";
+  canvas.style.transform=`rotate(${currentDeg}deg)`;
+
+  setTimeout(async ()=>{
+    const win=prizes[randomIndex];
+    document.getElementById("result").innerText="You won: "+win;
+
+    await fetch("/api/spin",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+token
+      },
+      body:JSON.stringify({username,prize:win})
+    });
+
+    spinning=false;
+  },4000);
+}
+
+/* HISTORY */
+async function loadHistory(){
+  const res = await fetch("/api/history/"+username,{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+
+  const data = await res.json();
+
+  if(!data.length){
+    document.getElementById("historyData").innerHTML="No spins yet.";
+    return;
+  }
+
+  let html="";
+  data.forEach(d=>{
+    html+=`<p>🎁 ${d.prize} - ${new Date(d.date).toLocaleString()}</p>`;
+  });
+
+  document.getElementById("historyData").innerHTML=html;
+}
+</script>
+
+</body>
+</html>

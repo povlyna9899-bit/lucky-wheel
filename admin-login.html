@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Admin Login</title>
+
+<link rel="stylesheet" href="style-login.css">
+<link rel="stylesheet" href="style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+</head>
+<body>
+
+<div class="background"></div>
+<div class="particles"></div>
+
+<div class="login-container">
+
+  <div class="login-card" id="loginCard">
+
+    <div class="logo">
+      <i class="fa-solid fa-shield-halved"></i>
+      <h2>Secure Admin</h2>
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-user"></i>
+      <input type="text" id="username" placeholder="Username">
+    </div>
+
+    <div class="input-group">
+      <i class="fa fa-lock"></i>
+      <input type="password" id="password" placeholder="Password">
+      <span class="toggle" onclick="togglePassword()">
+        <i class="fa fa-eye"></i>
+      </span>
+    </div>
+
+    <div class="options">
+      <label>
+        <input type="checkbox" id="remember"> Remember me
+      </label>
+    </div>
+
+    <button id="loginBtn" onclick="loginAdmin()">
+      <span id="btnText">Secure Login</span>
+      <span class="spinner" id="spinner"></span>
+    </button>
+
+    <p id="error" class="error"></p>
+
+  </div>
+</div>
+
+<script>
+
+function togglePassword() {
+  const pass = document.getElementById("password");
+  pass.type = pass.type === "password" ? "text" : "password";
+}
+
+async function loginAdmin() {
+
+  const btn = document.getElementById("loginBtn");
+  const spinner = document.getElementById("spinner");
+  const text = document.getElementById("btnText");
+  const card = document.getElementById("loginCard");
+
+  spinner.style.display = "inline-block";
+  text.style.display = "none";
+  btn.disabled = true;
+
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const remember = document.getElementById("remember").checked;
+
+  const res = await fetch("/admin-login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json();
+
+  spinner.style.display = "none";
+  text.style.display = "inline";
+  btn.disabled = false;
+
+  if (data.success) {
+    if (remember) {
+      localStorage.setItem("adminToken", data.token);
+    } else {
+      sessionStorage.setItem("adminToken", data.token);
+    }
+    window.location.href = "/admin";
+  } else {
+    card.classList.add("shake");
+    setTimeout(()=> card.classList.remove("shake"), 500);
+    document.getElementById("error").innerText = data.message || "Login Failed";
+  }
+}
+
+</script>
+
+</body>
+</html>

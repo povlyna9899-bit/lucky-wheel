@@ -1,0 +1,18 @@
+<h2>Lucky Spin</h2>
+<button onclick="spin()">Spin</button>
+<h3 id="result"></h3>
+
+<script>
+async function spin(){
+  const res = await fetch("/spin", {
+    headers:{
+      "Authorization": localStorage.getItem("token")
+    }
+  });
+
+  const data = await res.json();
+  result.innerHTML =
+    "Win: " + data.reward + 
+    " | Balance: " + data.balance;
+}
+</script>
