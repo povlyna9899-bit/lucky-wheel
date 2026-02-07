@@ -1,25 +1,304 @@
-<h2>Login</h2>
-<input id="user" placeholder="Username">
-<input id="pass" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>🎰 Mega Casino Spin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:radial-gradient(circle at top,#1b2735,#090a0f);
+  color:white;
+  overflow-x:hidden;
+}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  width:100%;
+  background:#000;
+  padding:15px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.username{color:#00ffcc;font-weight:bold}
+
+/* ===== CONTENT ===== */
+.content{text-align:center;padding:30px;}
+
+#wheelWrapper{
+  position:relative;
+  width:340px;
+  height:340px;
+  margin:30px auto;
+}
+
+/* ===== BULBS ===== */
+.bulbs{
+  position:absolute;
+  width:100%;
+  height:100%;
+}
+.bulb{
+  width:14px;
+  height:14px;
+  background:gold;
+  border-radius:50%;
+  position:absolute;
+  animation:blink 1s infinite alternate;
+  box-shadow:0 0 10px gold,0 0 20px orange;
+}
+@keyframes blink{
+  from{opacity:1;}
+  to{opacity:0.3;}
+}
+
+/* ===== POINTER ===== */
+.pointer{
+  width:0;height:0;
+  border-left:15px solid transparent;
+  border-right:15px solid transparent;
+  border-bottom:25px solid gold;
+  position:absolute;
+  top:-25px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+}
+
+/* ===== CANVAS ===== */
+canvas{
+  border-radius:50%;
+  border:12px solid gold;
+  box-shadow:0 0 40px gold;
+  transition:transform 4s cubic-bezier(.17,.67,.83,.67);
+}
+
+/* ===== BUTTON ===== */
+button{
+  margin-top:20px;
+  padding:14px 35px;
+  font-size:18px;
+  font-weight:bold;
+  background:linear-gradient(45deg,gold,orange);
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
+}
+
+#result{
+  margin-top:20px;
+  font-size:22px;
+  font-weight:bold;
+  color:lime;
+}
+
+/* ===== POPUP ===== */
+.popup{
+  position:fixed;
+  top:0;left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.8);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+.popup-content{
+  background:#111;
+  padding:20px;
+  width:300px;
+  border-radius:10px;
+}
+.popup-content h3{text-align:center}
+.popup-content button{
+  margin-top:10px;
+  width:100%;
+}
+</style>
+</head>
+<body>
 
 <script>
-async function login(){
-  const res = await fetch("/login", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body: JSON.stringify({
-      username: user.value,
-      password: pass.value
-    })
-  });
-
-  const data = await res.json();
-  if(data.success){
-    localStorage.setItem("token", data.token);
-    window.location="game.html";
-  } else {
-    alert("Login failed");
-  }
+const token = localStorage.getItem("playerToken");
+if(!token){
+  alert("Login required");
+  window.location.href="/player-login.html";
 }
 </script>
+
+<div class="topbar">
+  <div>🎰 Mega Casino</div>
+  <div class="username" id="username"></div>
+</div>
+
+<div class="content">
+<h2>Spin & Win</h2>
+
+<div id="wheelWrapper">
+  <div class="bulbs" id="bulbs"></div>
+  <div class="pointer"></div>
+  <canvas id="wheelCanvas" width="300" height="300"></canvas>
+</div>
+
+<button onclick="spinWheel()">🎡 SPIN</button>
+<button onclick="openHistory()">📜 History</button>
+<button onclick="openLeaderboard()">🏆 Leaderboard</button>
+
+<div id="result"></div>
+</div>
+
+<!-- HISTORY POPUP -->
+<div class="popup" id="historyPopup">
+  <div class="popup-content">
+    <h3>📜 My History</h3>
+    <div id="historyData"></div>
+    <button onclick="closeHistory()">Close</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD POPUP -->
+<div class="popup" id="leaderPopup">
+  <div class="popup-content">
+    <h3>🏆 Leaderboard</h3>
+    <div id="leaderData"></div>
+    <button onclick="closeLeaderboard()">Close</button>
+  </div>
+</div>
+
+<!-- SOUND -->
+<audio id="spinSound" src="https://assets.mixkit.co/sfx/preview/mixkit-slot-machine-spin-1930.mp3"></audio>
+<audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
+
+<script>
+const username = localStorage.getItem("playerUser") || "Player";
+document.getElementById("username").innerText="👤 "+username;
+
+/* ===== CREATE BULBS ===== */
+function createBulbs(){
+  const bulbContainer = document.getElementById("bulbs");
+  const totalBulbs = 24;
+  const radius = 160;
+
+  for(let i=0;i<totalBulbs;i++){
+    const bulb = document.createElement("div");
+    bulb.className = "bulb";
+
+    const angle = (i/totalBulbs)*2*Math.PI;
+    const x = 170 + radius*Math.cos(angle)-7;
+    const y = 170 + radius*Math.sin(angle)-7;
+
+    bulb.style.left=x+"px";
+    bulb.style.top=y+"px";
+
+    bulbContainer.appendChild(bulb);
+  }
+}
+createBulbs();
+
+/* ===== WHEEL DATA ===== */
+let prizes=["10$","20$","50$","0$","100$","Try Again"];
+let colors=["red","blue","green","purple","orange","cyan"];
+
+const canvas=document.getElementById("wheelCanvas");
+const ctx=canvas.getContext("2d");
+let currentDeg=0;
+let spinning=false;
+
+function drawWheel(){
+  const arc=2*Math.PI/prizes.length;
+  for(let i=0;i<prizes.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(150,150);
+    ctx.fillStyle=colors[i];
+    ctx.arc(150,150,150,i*arc,(i+1)*arc);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(150,150);
+    ctx.rotate(i*arc+arc/2);
+    ctx.fillStyle="white";
+    ctx.font="16px Arial";
+    ctx.fillText(prizes[i],70,5);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+/* ===== SPIN ===== */
+async function spinWheel(){
+  if(spinning) return;
+  spinning=true;
+  result.innerText="Spinning...";
+  spinSound.play();
+
+  const res=await fetch("/api/spin",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+token }
+  });
+
+  const data=await res.json();
+
+  if(!data.success){
+    result.innerText=data.message;
+    spinning=false;
+    return;
+  }
+
+  const index=prizes.indexOf(data.prize);
+  const rotateTo=360*5+(360/prizes.length)*index;
+  currentDeg+=rotateTo;
+  canvas.style.transform=`rotate(${currentDeg}deg)`;
+
+  setTimeout(()=>{
+    result.innerText="🎉 You won: "+data.prize;
+    winSound.play();
+
+    confetti({particleCount:150,spread:100,origin:{y:0.6}});
+    spinning=false;
+  },4000);
+}
+
+/* ===== HISTORY ===== */
+function openHistory(){
+  historyPopup.style.display="flex";
+  loadHistory();
+}
+function closeHistory(){
+  historyPopup.style.display="none";
+}
+async function loadHistory(){
+  const res=await fetch("/api/history",{headers:{ "Authorization":"Bearer "+token }});
+  const data=await res.json();
+  let html="";
+  data.forEach(d=>{
+    html+=`<p>🎁 ${d.prize}</p>`;
+  });
+  historyData.innerHTML=html || "No spins yet";
+}
+
+/* ===== LEADERBOARD ===== */
+function openLeaderboard(){
+  leaderPopup.style.display="flex";
+  loadLeader();
+}
+function closeLeaderboard(){
+  leaderPopup.style.display="none";
+}
+async function loadLeader(){
+  const res=await fetch("/api/leaderboard");
+  const data=await res.json();
+  let html="";
+  data.forEach((u,i)=>{
+    html+=`<p>${i+1}. ${u.username} - ${u.total}</p>`;
+  });
+  leaderData.innerHTML=html;
+}
+</script>
+
+</body>
+</html>

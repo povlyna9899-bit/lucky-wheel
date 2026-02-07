@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -8,62 +7,57 @@ const path = require("path");
 
 const app = express();
 
-/* =======================
-   CONNECT MONGODB
-======================= */
+/* ===================== CONNECT MONGODB ===================== */
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ Mongo Error:", err));
 
-/* =======================
-   MIDDLEWARE
-======================= */
+/* ===================== MIDDLEWARE ===================== */
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-/* =======================
-   MODELS
-======================= */
+/* ===================== MODELS ===================== */
 const userSchema = new mongoose.Schema({
-  username: { type:String, unique:true },
+  username: { type: String, unique: true },
   password: String,
-  role: { type:String, default:"player" }
+  role: { type: String, default: "player" },
+  spinsLeft: { type: Number, default: 0 },
+  balance: { type: Number, default: 0 }
 });
 
 const spinSchema = new mongoose.Schema({
   userId: String,
   username: String,
-  prize: String,
-  createdAt: { type:Date, default:Date.now }
+  prize: Number,
+  createdAt: { type: Date, default: Date.now }
 });
 
 const User = mongoose.model("User", userSchema);
 const Spin = mongoose.model("Spin", spinSchema);
 
-/* =======================
-   VERIFY TOKEN
-======================= */
+/* ===================== VERIFY TOKEN ===================== */
 function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
 
-  const header = req.headers.authorization;
-  if (!header) return res.status(401).json({ message: "No Token" });
+  if (!authHeader)
+    return res.status(401).json({ message: "No token provided" });
 
-  const token = header.split(" ")[1];
+  const token = authHeader.split(" ")[1];
+
+  if (!token)
+    return res.status(401).json({ message: "Invalid token format" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
-    res.status(403).json({ message: "Invalid Token" });
+    return res.status(403).json({ message: "Invalid or expired token" });
   }
 }
 
-/* =======================
-   ADMIN LOGIN
-======================= */
+/* ===================== ADMIN LOGIN ===================== */
 app.post("/admin-login", (req, res) => {
-
   const { username, password } = req.body;
 
   if (
@@ -82,11 +76,8 @@ app.post("/admin-login", (req, res) => {
   res.json({ success: false, message: "Wrong Admin" });
 });
 
-/* =======================
-   PLAYER LOGIN
-======================= */
+/* ===================== PLAYER LOGIN ===================== */
 app.post("/player/login", async (req, res) => {
-
   const { username, password } = req.body;
 
   const user = await User.findOne({ username });
@@ -104,11 +95,8 @@ app.post("/player/login", async (req, res) => {
   res.json({ success: true, token });
 });
 
-/* =======================
-   CREATE PLAYER (ADMIN)
-======================= */
+/* ===================== CREATE PLAYER ===================== */
 app.post("/create-player", verifyToken, async (req, res) => {
-
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
@@ -123,16 +111,17 @@ app.post("/create-player", verifyToken, async (req, res) => {
 
   const hash = await bcrypt.hash(password, 10);
 
-  await User.create({ username, password: hash });
+  await User.create({
+    username,
+    password: hash,
+    role: "player"
+  });
 
   res.json({ success: true });
 });
 
-/* =======================
-   GET PLAYERS (ADMIN)
-======================= */
+/* ===================== GET PLAYERS ===================== */
 app.get("/players", verifyToken, async (req, res) => {
-
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
@@ -140,19 +129,16 @@ app.get("/players", verifyToken, async (req, res) => {
   res.json(users);
 });
 
-/* =======================
-   EDIT PLAYER (ADMIN)
-======================= */
+/* ===================== EDIT PLAYER ===================== */
 app.put("/edit-player/:id", verifyToken, async (req, res) => {
-
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
   const { username, password } = req.body;
-
   const updateData = {};
 
   if (username) updateData.username = username;
+
   if (password) {
     const hash = await bcrypt.hash(password, 10);
     updateData.password = hash;
@@ -163,11 +149,25 @@ app.put("/edit-player/:id", verifyToken, async (req, res) => {
   res.json({ success: true });
 });
 
-/* =======================
-   DELETE PLAYER (ADMIN)
-======================= */
-app.delete("/delete/:id", verifyToken, async (req, res) => {
+/* ===================== SET SPIN (ADMIN) ===================== */
+app.put("/set-spin/:id", verifyToken, async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin Only" });
 
+  const { spins } = req.body;
+
+  if (spins == null)
+    return res.json({ success: false, message: "Missing spins value" });
+
+  await User.findByIdAndUpdate(req.params.id, {
+    spinsLeft: Number(spins)
+  });
+
+  res.json({ success: true });
+});
+
+/* ===================== DELETE PLAYER ===================== */
+app.delete("/delete/:id", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
@@ -176,56 +176,69 @@ app.delete("/delete/:id", verifyToken, async (req, res) => {
   res.json({ success: true });
 });
 
-/* =======================
-   SPIN GAME (PLAYER)
-======================= */
+/* ===================== ADMIN VIEW USER HISTORY (WITH DATE FILTER)===================== */
+app.get("/api/admin/user-history/:userId", verifyToken, async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin Only" });
 
-const prizes = [
-  "💎 10 Points",
-  "💎 20 Points",
-  "💰 50 Points",
-  "🎁 Bonus",
-  "🔥 Jackpot",
-  "❌ Try Again"
-];
+  const { start, end } = req.query;
 
-app.post("/api/spin", verifyToken, async (req, res) => {
+  let filter = { userId: req.params.userId };
 
+  if (start && end) {
+    filter.createdAt = {
+      $gte: new Date(start),
+      $lte: new Date(end)
+    };
+  }
+
+  const spins = await Spin.find(filter).sort({ createdAt: -1 });
+
+  res.json(spins);
+});
+
+/* ===================== PLAYER SPIN ===================== */
+app.post("/spin", verifyToken, async (req, res) => {
   if (req.user.role !== "player")
     return res.status(403).json({ message: "Player Only" });
 
-  // Daily limit (1 spin per day)
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const user = await User.findById(req.user.id);
+  if (!user)
+    return res.status(404).json({ message: "User not found" });
 
-  const alreadySpun = await Spin.findOne({
-    userId: req.user.id,
-    createdAt: { $gte: today }
-  });
+  if (user.spinsLeft <= 0)
+    return res.status(400).json({ message: "No spins remaining" });
 
-  if (alreadySpun) {
-    return res.json({
-      success: false,
-      message: "You already spun today!"
-    });
-  }
+  const prizes = [0, 5, 10, 20, 30, 50, 100];
+  const randomPrize =
+    prizes[Math.floor(Math.random() * prizes.length)];
 
-  const prize = prizes[Math.floor(Math.random() * prizes.length)];
+  user.spinsLeft -= 1;
+  user.balance += randomPrize;
+
+  await user.save();
 
   await Spin.create({
-    userId: req.user.id,
-    username: req.user.username,
-    prize
+    userId: user._id,
+    username: user.username,
+    prize: randomPrize
   });
 
-  res.json({ success: true, prize });
+  res.json({
+    prize: randomPrize,
+    spinsLeft: user.spinsLeft,
+    balance: user.balance
+  });
 });
 
-/* =======================
-   ADMIN SEE ALL SPINS
-======================= */
-app.get("/api/spins", verifyToken, async (req, res) => {
+/* ===================== MY SPIN COUNT ===================== */
+app.get("/api/my-spin", verifyToken, async (req, res) => {
+  const user = await User.findById(req.user.id);
+  res.json({ spinsLeft: user.spinsLeft, balance: user.balance });
+});
 
+/* ===================== ADMIN SEE ALL SPINS ===================== */
+app.get("/api/spins", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
@@ -233,11 +246,8 @@ app.get("/api/spins", verifyToken, async (req, res) => {
   res.json(spins);
 });
 
-/* =======================
-   LEADERBOARD
-======================= */
+/* ===================== LEADERBOARD ===================== */
 app.get("/api/leaderboard", async (req, res) => {
-
   const leaderboard = await Spin.aggregate([
     {
       $group: {
@@ -251,17 +261,26 @@ app.get("/api/leaderboard", async (req, res) => {
   res.json(leaderboard);
 });
 
-/* =======================
-   ROUTE HISTORY
-======================= */
-app.get("/api/history/:username", async (req,res)=>{
-  const spins = await Spin.find({ username:req.params.username });
+/* ===================== MY SPIN INFO ===================== */
+app.get("/api/my-spin", verifyToken, async (req, res) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  res.json({
+    spinsLeft: user.spinsLeft,
+    balance: user.balance
+  });
+});
+
+/* ===================== MY HISTORY ===================== */
+app.get("/api/history", verifyToken, async (req, res) => {
+  const spins = await Spin.find({ userId: req.user.id })
+    .sort({ createdAt: -1 });
+
   res.json(spins);
 });
 
-/* =======================
-   HTML ROUTES
-======================= */
+/* ===================== HTML ROUTES ===================== */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -274,9 +293,7 @@ app.get("/player", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "player-page.html"));
 });
 
-/* =======================
-   START SERVER
-======================= */
+/* ===================== START SERVER ===================== */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

@@ -64,7 +64,7 @@ body{
 
 .sidebar a:hover{
   background:gold;
-  color:black;
+  color:rgb(255, 0, 0);
 }
 
 .sidebar.active{
@@ -223,9 +223,33 @@ function drawWheel(){
   }
 }
 drawWheel();
+async function loadMySpin(){
+  const res = await fetch("/spin-info",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  document.getElementById("result").innerText =
+    "🎯 Remaining Spins: " + data.spinCount;
+}
+loadMySpin();
 
 async function spinWheel(){
   if(spinning) return;
+
+  const res = await fetch("/spin",{
+    method:"POST",
+    headers:{
+      "Authorization":"Bearer "+token
+    }
+  });
+
+  const data = await res.json();
+
+  if(!res.ok){
+    alert(data.message);
+    return;
+  }
+
   spinning=true;
 
   const randomIndex=Math.floor(Math.random()*prizes.length);
@@ -235,26 +259,20 @@ async function spinWheel(){
   canvas.style.transition="transform 4s ease-out";
   canvas.style.transform=`rotate(${currentDeg}deg)`;
 
-  setTimeout(async ()=>{
-    const win=prizes[randomIndex];
-    document.getElementById("result").innerText="You won: "+win;
-
-    await fetch("/api/spin",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":"Bearer "+token
-      },
-      body:JSON.stringify({username,prize:win})
-    });
+  setTimeout(()=>{
+    document.getElementById("result").innerText=
+      "You won: "+data.prize+
+      " | Remaining Spins: "+data.spinsLeft;
 
     spinning=false;
+ 
   },4000);
 }
 
+
 /* HISTORY */
 async function loadHistory(){
-  const res = await fetch("/api/history/"+username,{
+  const res = await fetch("/api/history",{
     headers:{ "Authorization":"Bearer "+token }
   });
 
@@ -267,7 +285,12 @@ async function loadHistory(){
 
   let html="";
   data.forEach(d=>{
-    html+=`<p>🎁 ${d.prize} - ${new Date(d.date).toLocaleString()}</p>`;
+    html += `
+      <div style="padding:10px;border-bottom:1px solid #444;">
+        🎁 $${d.prize}<br>
+        📅 ${new Date(d.createdAt).toLocaleString()}
+      </div>
+    `;
   });
 
   document.getElementById("historyData").innerHTML=html;
