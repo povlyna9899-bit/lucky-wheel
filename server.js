@@ -9,12 +9,12 @@ const app = express();
 
 /* ===================== CONNECT MONGODB ===================== */
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("✅ MongoDB Connected"))
-.catch(err => console.log("❌ Mongo Error:", err));
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.log("❌ Mongo Error:", err));
 
 /* ===================== MIDDLEWARE ===================== */
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(__dirname)); // ✅ FIXED (no public folder)
 
 /* ===================== MODELS ===================== */
 const userSchema = new mongoose.Schema({
@@ -38,12 +38,10 @@ const Spin = mongoose.model("Spin", spinSchema);
 /* ===================== VERIFY TOKEN ===================== */
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
-
   if (!authHeader)
     return res.status(401).json({ message: "No token provided" });
 
   const token = authHeader.split(" ")[1];
-
   if (!token)
     return res.status(401).json({ message: "Invalid token format" });
 
@@ -69,7 +67,6 @@ app.post("/admin-login", (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
-
     return res.json({ success: true, token });
   }
 
@@ -145,17 +142,15 @@ app.put("/edit-player/:id", verifyToken, async (req, res) => {
   }
 
   await User.findByIdAndUpdate(req.params.id, updateData);
-
   res.json({ success: true });
 });
 
-/* ===================== SET SPIN (ADMIN) ===================== */
+/* ===================== SET SPIN ===================== */
 app.put("/set-spin/:id", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
   const { spins } = req.body;
-
   if (spins == null)
     return res.json({ success: false, message: "Missing spins value" });
 
@@ -172,17 +167,15 @@ app.delete("/delete/:id", verifyToken, async (req, res) => {
     return res.status(403).json({ message: "Admin Only" });
 
   await User.findByIdAndDelete(req.params.id);
-
   res.json({ success: true });
 });
 
-/* ===================== ADMIN VIEW USER HISTORY (WITH DATE FILTER)===================== */
+/* ===================== ADMIN USER HISTORY ===================== */
 app.get("/api/admin/user-history/:userId", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
   const { start, end } = req.query;
-
   let filter = { userId: req.params.userId };
 
   if (start && end) {
@@ -193,7 +186,6 @@ app.get("/api/admin/user-history/:userId", verifyToken, async (req, res) => {
   }
 
   const spins = await Spin.find(filter).sort({ createdAt: -1 });
-
   res.json(spins);
 });
 
@@ -231,10 +223,24 @@ app.post("/spin", verifyToken, async (req, res) => {
   });
 });
 
-/* ===================== MY SPIN COUNT ===================== */
+/* ===================== MY SPIN INFO ===================== */
 app.get("/api/my-spin", verifyToken, async (req, res) => {
   const user = await User.findById(req.user.id);
-  res.json({ spinsLeft: user.spinsLeft, balance: user.balance });
+  if (!user)
+    return res.status(404).json({ message: "User not found" });
+
+  res.json({
+    spinsLeft: user.spinsLeft,
+    balance: user.balance
+  });
+});
+
+/* ===================== MY HISTORY ===================== */
+app.get("/api/history", verifyToken, async (req, res) => {
+  const spins = await Spin.find({ userId: req.user.id })
+    .sort({ createdAt: -1 });
+
+  res.json(spins);
 });
 
 /* ===================== ADMIN SEE ALL SPINS ===================== */
@@ -261,36 +267,17 @@ app.get("/api/leaderboard", async (req, res) => {
   res.json(leaderboard);
 });
 
-/* ===================== MY SPIN INFO ===================== */
-app.get("/api/my-spin", verifyToken, async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (!user) return res.status(404).json({ message: "User not found" });
-
-  res.json({
-    spinsLeft: user.spinsLeft,
-    balance: user.balance
-  });
-});
-
-/* ===================== MY HISTORY ===================== */
-app.get("/api/history", verifyToken, async (req, res) => {
-  const spins = await Spin.find({ userId: req.user.id })
-    .sort({ createdAt: -1 });
-
-  res.json(spins);
-});
-
 /* ===================== HTML ROUTES ===================== */
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+  res.sendFile(path.join(__dirname, "admin.html"));
 });
 
 app.get("/player", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "player-page.html"));
+  res.sendFile(path.join(__dirname, "player-page.html"));
 });
 
 /* ===================== START SERVER ===================== */
