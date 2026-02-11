@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Player Dashboard</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
 
 <style>
 body{
@@ -35,9 +36,26 @@ body{
   color:gold;
 }
 
-.username{
+.user-info{
+  display:flex;
+  align-items:center;
+  gap:15px;
   font-weight:bold;
   color:#00ffcc;
+}
+
+.balance{
+  background:linear-gradient(45deg,gold,orange);
+  padding:6px 12px;
+  border-radius:20px;
+  color:black;
+  box-shadow:0 0 10px gold;
+  animation: balanceGlow 1.5s infinite alternate;
+}
+
+@keyframes balanceGlow{
+  from{ box-shadow:0 0 5px gold; }
+  to{ box-shadow:0 0 20px gold; }
 }
 
 /* SIDEBAR */
@@ -77,17 +95,39 @@ body{
   padding:40px 20px;
 }
 
-/* CARD STYLE */
+/* CARD STYLE & WHEEL area */
 #wheelContainer{
   width:340px;
-  margin:40px auto;
+  margin:20px auto 40px auto;
   padding:20px;
   background: rgba(255,255,255,0.05);
   border-radius:20px;
   box-shadow:0 0 40px rgba(255,215,0,0.2);
 }
 
+/* wrapper for pointer + canvas */
+#wheelWrapper{
+  position:relative;
+  width:300px;
+  margin:auto;
+}
+
+.pointer{
+  position:absolute;
+  top:-0px;
+  left:50%;
+  transform:translateX(-50%) rotate(180deg);
+  width:0;
+  height:0;
+  border-left:18px solid transparent;
+  border-right:18px solid transparent;
+  border-bottom:25px solid red;
+
+  z-index: 9999;             /* 🔥 សំខាន់ */
+}
 canvas{
+  position: relative;   /* បន្ថែម */
+  z-index: 1;           /* ទាបជាង pointer */
   border-radius:50%;
   border:12px solid gold;
   box-shadow:0 0 30px gold;
@@ -124,6 +164,67 @@ button:hover{
   from{ text-shadow:0 0 5px lime; }
   to{ text-shadow:0 0 20px lime; }
 }
+
+/* 🎬 AUTO SLIDER */
+.slider{
+  width:90%;
+  max-width:600px;
+  height:260px;
+  margin:60px auto;
+  overflow:hidden;
+  border-radius:20px;
+  box-shadow:0 0 35px rgb(0, 0, 0);
+}
+
+.slides{
+  display:flex;
+  width:300%;
+  animation: slide 20s infinite;
+}
+
+.slides img{
+  width:100%;
+  height:260px;
+  object-fit:contain;
+  background:#000;
+}
+
+@keyframes slide{
+  0%   { transform:translateX(0); }
+  33%  { transform:translateX(-100%); }
+  66%  { transform:translateX(-200%); }
+  100% { transform:translateX(0); }
+}
+
+/* MUSIC BUTTON */
+.music-btn{
+  position:fixed;
+  bottom:25px;
+  right:25px;
+  padding:12px 20px;
+  border:none;
+  border-radius:30px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  background:linear-gradient(45deg,#ffd700,#ff9900);
+  color:black;
+  box-shadow:0 0 15px #ffd700;
+  transition:0.3s;
+  z-index:999;
+}
+
+.music-btn:hover{
+  transform:scale(1.08);
+  box-shadow:0 0 25px #ffd700;
+}
+
+.music-off{
+  background:linear-gradient(45deg,#555,#222);
+  color:white;
+  box-shadow:0 0 15px #999;
+}
+
 </style>
 </head>
 <body>
@@ -139,8 +240,17 @@ if(!token){
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="menu-btn" onclick="toggleMenu()">☰</div>
-  <div>🎉 Player Dashboard</div>
-  <div class="username" id="username"></div>
+
+  <div style="flex:1;text-align:center;font-weight:bold;">
+    🎉 Player Dashboard
+  </div>
+
+  <div class="user-info">
+    👤 <span id="username"></span>
+    <span class="balance">
+      💰 $<span id="topBalance">0</span>
+    </span>
+  </div>
 </div>
 
 <!-- SIDEBAR -->
@@ -153,33 +263,63 @@ if(!token){
 <!-- CONTENT -->
 <div class="content">
 
+  <!-- game -->
   <div id="gameSection">
     <h2>Spin & Win</h2>
+
+    <!-- wheel -->
     <div id="wheelContainer">
-      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+      <div id="wheelWrapper">
+        <div class="pointer"></div>
+        <canvas id="wheelCanvas" width="300" height="300"></canvas>
+      </div>
     </div>
+
     <button onclick="spinWheel()">🎡 SPIN</button>
     <div id="result"></div>
   </div>
 
+  <!-- history -->
   <div id="historySection" style="display:none;">
     <h2>My Spin History</h2>
     <div id="historyData">Loading...</div>
   </div>
 
+  <!-- slider -->
+  <div class="slider">
+    <div class="slides">
+      <img src="img/poster1.jpg" alt="Poster 1">
+      <img src="img/poster2.jpg" alt="Poster 2">
+      <img src="img/poster3.jpg" alt="Poster 3">
+    </div>
+  </div>
+
 </div>
 
-<script>
-const username = localStorage.getItem("playerUser") || "Player";
-document.getElementById("username").innerText = username;
+<!-- Music -->
+<audio id="casinoMusic" loop autoplay muted>
+  <source src="/music.mp3" type="audio/mpeg">
+</audio>
 
-/* MENU */
+<button id="musicToggle" class="music-btn">
+  🔊 MUSIC ON
+</button>
+
+<script>
+// ----- parse token to get username -----
+function parseJwt(token){
+  return JSON.parse(atob(token.split('.')[1]));
+}
+const decoded = parseJwt(token);
+document.getElementById("username").innerText = decoded.username;
+
+// ----- MENU / LOGOUT / SECTION -----
 function toggleMenu(){
   document.getElementById("sidebar").classList.toggle("active");
 }
 
 function logout(){
-  localStorage.removeItem("playerUser");
+  // keep musicState if you want, but remove token only
   localStorage.removeItem("playerToken");
   window.location.href="/player-login.html";
 }
@@ -195,82 +335,140 @@ function showHistory(){
   loadHistory();
 }
 
-/* WHEEL */
-const prizes = ["10$","20$","50$","0$","100$","Try Again"];
-const colors = ["red","blue","green","purple","orange","cyan"];
+/* ------------------------------------ */
+/* --------- Draw wheel style ---------- */
+/* ------------------------------------ */
+
 const canvas = document.getElementById("wheelCanvas");
 const ctx = canvas.getContext("2d");
+
+// new wheel data to match green/white real wheel style
+const prizes = [
+  { value: 0,  label: "0$" },   // match server value 0
+  { value: 5,  label: "5$" },   // match server value 5
+  { value: 10, label: "10$" },  // server value 10
+  { value: 20, label: "20$" },  // server value 20
+  { value: 30, label: "30$" },  // server value 30
+  { value: 50, label: "50$" },  // server value 50
+  { value: 100,label: "100$" }  // server value 100
+];
 
 let currentDeg = 0;
 let spinning = false;
 
 function drawWheel(){
+  ctx.clearRect(0,0,300,300);
   const arc = 2*Math.PI/prizes.length;
+  ctx.font = "bold 14px Segoe UI";
+  ctx.textAlign = "right";
 
   for(let i=0;i<prizes.length;i++){
     ctx.beginPath();
     ctx.moveTo(150,150);
-    ctx.fillStyle=colors[i];
-    ctx.arc(150,150,150,i*arc,(i+1)*arc);
+    ctx.fillStyle = (i % 2 === 0) ? "#2ecc71" : "#ffffff";
+    ctx.arc(
+  150,
+  150,
+  150,
+  i * arc - Math.PI/2,
+  (i + 1) * arc - Math.PI/2
+);
+
     ctx.fill();
 
     ctx.save();
     ctx.translate(150,150);
-    ctx.rotate(i*arc+arc/2);
-    ctx.fillStyle="white";
-    ctx.fillText(prizes[i],70,5);
+    ctx.rotate(i*arc + arc/2 - Math.PI/2);
+    ctx.fillStyle="#000"; // text color
+    ctx.fillText(prizes[i].label,120,10);
     ctx.restore();
   }
 }
 drawWheel();
-async function loadMySpin(){
-  const res = await fetch("/spin-info",{
-    headers:{ "Authorization":"Bearer "+token }
-  });
-  const data = await res.json();
-  document.getElementById("result").innerText =
-    "🎯 Remaining Spins: " + data.spinCount;
-}
-loadMySpin();
+
+/* ------------------------------------ */
+/* --------- Spin logic -------------- */
+/* ------------------------------------ */
 
 async function spinWheel(){
   if(spinning) return;
 
   const res = await fetch("/spin",{
     method:"POST",
-    headers:{
-      "Authorization":"Bearer "+token
-    }
+    headers:{ "Authorization":"Bearer "+token }
   });
 
   const data = await res.json();
+
+  console.log("Server prize:", data.prize, typeof data.prize); // debug
 
   if(!res.ok){
     alert(data.message);
     return;
   }
 
-  spinning=true;
+  spinning = true;
 
-  const randomIndex=Math.floor(Math.random()*prizes.length);
-  const rotateTo=360*5+(360/prizes.length)*randomIndex;
+  // កំណត់ index
+  let index = -1;
 
-  currentDeg+=rotateTo;
-  canvas.style.transition="transform 4s ease-out";
-  canvas.style.transform=`rotate(${currentDeg}deg)`;
+  // ប្រសិនបើ prize ជា number
+  if(typeof data.prize === "number"){
+    index = prizes.findIndex(p => p.value === data.prize);
+  } else {
+    // ប្រសិនបើ prize ជា string
+    // អាចមាន "50$" ឬ​ ឬ "Try Again"
+    // ជាមួយ label ឬ value
+    index = prizes.findIndex(p => p.label === data.prize);
+    // បើត្រូវតែដក $ ឲ្យប្រៀបប្រដាប់
+    if(index < 0){
+      // try to parse number from string
+      const num = parseInt(data.prize.replace(/[^0-9]/g, ""));
+      if(!isNaN(num)){
+        index = prizes.findIndex(p => p.value === num);
+      }
+    }
+  }
+
+  if(index < 0){
+    // fallback
+    index = 0;
+  }
+
+const sliceDeg = 360 / prizes.length;
+
+// គណនា degree ចុងក្រោយត្រឹមត្រូវ
+const finalDeg = 360 - (index * sliceDeg) - sliceDeg / 2;
+
+// បង្វិល 5 ជុំ ហើយបញ្ឈប់ត្រឹម slice
+const totalRotation = 360 * 5 + finalDeg;
+
+// RESET rotation មុន
+canvas.style.transition = "none";
+canvas.style.transform = "rotate(0deg)";
+
+// បង្ខំ browser reflow
+void canvas.offsetWidth;
+
+// បង្វិលថ្មី
+canvas.style.transition = "transform 4s cubic-bezier(.17,.67,.83,.67)";
+canvas.style.transform = `rotate(${totalRotation}deg)`;
+
 
   setTimeout(()=>{
-    document.getElementById("result").innerText=
-      "You won: "+data.prize+
+    document.getElementById("result").innerText =
+      "🎉  អ្នកឈ្នះ: "+data.prize+
       " | Remaining Spins: "+data.spinsLeft;
 
-    spinning=false;
- 
+    document.getElementById("topBalance").innerText = data.balance;
+    spinning = false;
   },4000);
 }
 
 
-/* HISTORY */
+/* ------------------------------------ */
+/* --------- History ------------------ */
+/* ------------------------------------ */
 async function loadHistory(){
   const res = await fetch("/api/history",{
     headers:{ "Authorization":"Bearer "+token }
@@ -292,9 +490,57 @@ async function loadHistory(){
       </div>
     `;
   });
-
   document.getElementById("historyData").innerHTML=html;
 }
+
+/* ------------------------------------ */
+/* --------- Load balance on start ---- */
+/* ------------------------------------ */
+async function loadMySpin(){
+  const res = await fetch("/api/my-spin",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+
+  // update balance shown in top bar
+  document.getElementById("topBalance").innerText = data.balance;
+
+  // also optionally update result area (uncomment if desired)
+  // document.getElementById("result").innerText =
+  //   "🎯 Remaining Spins: " + data.spinsLeft + " | Balance: $" + data.balance;
+}
+loadMySpin();
+
+/* ------------------------------------ */
+/* --------- Music toggle ------------ */
+/* ------------------------------------ */
+document.addEventListener("DOMContentLoaded", function () {
+  const musicBtn = document.getElementById("musicToggle");
+  const casinoMusic = document.getElementById("casinoMusic");
+
+  // Read from localStorage (data saved across sessions).  
+  // localStorage persists across browser sessions according to MDN docs. :contentReference[oaicite:0]{index=0}
+  let state = localStorage.getItem("musicState") || "on";
+
+  function updateMusic(){
+    if(state === "on"){
+      casinoMusic.muted = false;
+      musicBtn.innerText = "🔊 MUSIC ON";
+      casinoMusic.play().catch(()=>{});
+    } else {
+      casinoMusic.muted = true;
+      musicBtn.innerText = "🔇 MUSIC OFF";
+    }
+  }
+
+  updateMusic();
+
+  musicBtn.addEventListener("click", ()=>{
+    state = (state === "on") ? "off" : "on";
+    localStorage.setItem("musicState", state);
+    updateMusic();
+  });
+});
 </script>
 
 </body>

@@ -178,10 +178,13 @@ particlesJS("particles-js",{
 const btn=document.getElementById("btn");
 const hoverSound=document.getElementById("hoverSound");
 
-btn.addEventListener("mouseenter",()=>{
-  hoverSound.currentTime=0;
-  hoverSound.play();
+btn.addEventListener("click", async () => {
+  try {
+    hoverSound.currentTime = 0;
+    await hoverSound.play();
+  } catch {}
 });
+
 
 /* Password Toggle */
 function togglePassword(){

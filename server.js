@@ -9,12 +9,12 @@ const app = express();
 
 /* ===================== CONNECT MONGODB ===================== */
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ Mongo Error:", err));
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => console.log("❌ Mongo Error:", err));
 
 /* ===================== MIDDLEWARE ===================== */
 app.use(express.json());
-app.use(express.static(__dirname)); // ✅ FIXED (no public folder)
+app.use(express.static(path.join(__dirname, "public")));
 
 /* ===================== MODELS ===================== */
 const userSchema = new mongoose.Schema({
@@ -38,10 +38,12 @@ const Spin = mongoose.model("Spin", spinSchema);
 /* ===================== VERIFY TOKEN ===================== */
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
+
   if (!authHeader)
     return res.status(401).json({ message: "No token provided" });
 
   const token = authHeader.split(" ")[1];
+
   if (!token)
     return res.status(401).json({ message: "Invalid token format" });
 
@@ -67,6 +69,7 @@ app.post("/admin-login", (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
+
     return res.json({ success: true, token });
   }
 
@@ -142,15 +145,17 @@ app.put("/edit-player/:id", verifyToken, async (req, res) => {
   }
 
   await User.findByIdAndUpdate(req.params.id, updateData);
+
   res.json({ success: true });
 });
 
-/* ===================== SET SPIN ===================== */
+/* ===================== SET SPIN (ADMIN) ===================== */
 app.put("/set-spin/:id", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
   const { spins } = req.body;
+
   if (spins == null)
     return res.json({ success: false, message: "Missing spins value" });
 
@@ -167,15 +172,17 @@ app.delete("/delete/:id", verifyToken, async (req, res) => {
     return res.status(403).json({ message: "Admin Only" });
 
   await User.findByIdAndDelete(req.params.id);
+
   res.json({ success: true });
 });
 
-/* ===================== ADMIN USER HISTORY ===================== */
+/* ===================== ADMIN VIEW USER HISTORY (WITH DATE FILTER)===================== */
 app.get("/api/admin/user-history/:userId", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
     return res.status(403).json({ message: "Admin Only" });
 
   const { start, end } = req.query;
+
   let filter = { userId: req.params.userId };
 
   if (start && end) {
@@ -186,6 +193,7 @@ app.get("/api/admin/user-history/:userId", verifyToken, async (req, res) => {
   }
 
   const spins = await Spin.find(filter).sort({ createdAt: -1 });
+
   res.json(spins);
 });
 
@@ -201,9 +209,34 @@ app.post("/spin", verifyToken, async (req, res) => {
   if (user.spinsLeft <= 0)
     return res.status(400).json({ message: "No spins remaining" });
 
-  const prizes = [0, 5, 10, 20, 30, 50, 100];
-  const randomPrize =
-    prizes[Math.floor(Math.random() * prizes.length)];
+ // 🎯 Prize + Probability (%)
+const prizeConfig = [
+  { value: 0,   weight: 50 },
+  { value: 5,   weight: 25 },
+  { value: 10,  weight: 15 },
+  { value: 20,  weight: 10 },
+  { value: 30,  weight: 5 },
+  { value: 50,  weight: 3 },
+  { value: 100, weight: 2 }
+];
+
+// weighted random
+function getWeightedPrize(config){
+  const totalWeight = config.reduce((sum,p)=>sum+p.weight,0);
+  const random = Math.random() * totalWeight;
+
+  let cumulative = 0;
+  for(const item of config){
+    cumulative += item.weight;
+    if(random <= cumulative){
+      return item.value;
+    }
+  }
+  return config[0].value;
+}
+
+const randomPrize = getWeightedPrize(prizeConfig);
+
 
   user.spinsLeft -= 1;
   user.balance += randomPrize;
@@ -223,25 +256,6 @@ app.post("/spin", verifyToken, async (req, res) => {
   });
 });
 
-/* ===================== MY SPIN INFO ===================== */
-app.get("/api/my-spin", verifyToken, async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (!user)
-    return res.status(404).json({ message: "User not found" });
-
-  res.json({
-    spinsLeft: user.spinsLeft,
-    balance: user.balance
-  });
-});
-
-/* ===================== MY HISTORY ===================== */
-app.get("/api/history", verifyToken, async (req, res) => {
-  const spins = await Spin.find({ userId: req.user.id })
-    .sort({ createdAt: -1 });
-
-  res.json(spins);
-});
 
 /* ===================== ADMIN SEE ALL SPINS ===================== */
 app.get("/api/spins", verifyToken, async (req, res) => {
@@ -267,17 +281,36 @@ app.get("/api/leaderboard", async (req, res) => {
   res.json(leaderboard);
 });
 
+/* ===================== MY SPIN INFO ===================== */
+app.get("/api/my-spin", verifyToken, async (req, res) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  res.json({
+    spinsLeft: user.spinsLeft,
+    balance: user.balance
+  });
+});
+
+/* ===================== MY HISTORY ===================== */
+app.get("/api/history", verifyToken, async (req, res) => {
+  const spins = await Spin.find({ userId: req.user.id })
+    .sort({ createdAt: -1 });
+
+  res.json(spins);
+});
+
 /* ===================== HTML ROUTES ===================== */
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "admin.html"));
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 app.get("/player", (req, res) => {
-  res.sendFile(path.join(__dirname, "player-page.html"));
+  res.sendFile(path.join(__dirname, "public", "player-page.html"));
 });
 
 /* ===================== START SERVER ===================== */
