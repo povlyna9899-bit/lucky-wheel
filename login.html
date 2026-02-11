@@ -1,0 +1,25 @@
+<h2>Login</h2>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+
+<script>
+async function login(){
+  const res = await fetch("/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json"},
+    body: JSON.stringify({
+      username: user.value,
+      password: pass.value
+    })
+  });
+
+  const data = await res.json();
+  if(data.success){
+    localStorage.setItem("token", data.token);
+    window.location="game.html";
+  } else {
+    alert("Login failed");
+  }
+}
+</script>
