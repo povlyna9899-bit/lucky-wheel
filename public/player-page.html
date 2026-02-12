@@ -16,46 +16,58 @@ body{
 
 /* TOP BAR */
 .topbar{
+  position:relative;
   width:100%;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(10px);
-  padding:15px 30px;
+  height:60px;
+  background:linear-gradient(to right,#000000,#0f2027);
   display:flex;
+  align-items:center;
   justify-content:space-between;
-  align-items:center;
+  padding:0 15px;
   box-sizing:border-box;
-  border-bottom:1px solid rgba(255,255,255,0.1);
+  border-bottom:1px solid rgba(255,215,0,0.3);
 }
 
-.menu-btn{
-  font-size:22px;
-  cursor:pointer;
-  transition:0.3s;
-}
-.menu-btn:hover{
-  color:gold;
+/* CENTER TITLE */
+.nav-center{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font-weight:bold;
+  font-size:16px;
+  color:white;
+  letter-spacing:1px;
 }
 
-.user-info{
+/* RIGHT SIDE */
+.nav-right{
   display:flex;
   align-items:center;
-  gap:15px;
-  font-weight:bold;
+  gap:10px;
+}
+
+/* USER BOX */
+.user-box{
   color:#00ffcc;
+  font-weight:bold;
+  font-size:14px;
 }
 
-.balance{
-  background:linear-gradient(45deg,gold,orange);
+/* SPIN BOX */
+.spin-box{
+  background:linear-gradient(45deg,#ffd700,#ff9900);
   padding:6px 12px;
-  border-radius:20px;
+  border-radius:50px;
+  font-size:14px;
+  font-weight:bold;
   color:black;
-  box-shadow:0 0 10px gold;
-  animation: balanceGlow 1.5s infinite alternate;
+  box-shadow:0 0 12px #ffd700;
+  animation:spinGlow 1.5s infinite alternate;
 }
 
-@keyframes balanceGlow{
-  from{ box-shadow:0 0 5px gold; }
-  to{ box-shadow:0 0 20px gold; }
+@keyframes spinGlow{
+  from{ box-shadow:0 0 5px #ffd700; }
+  to{ box-shadow:0 0 20px #ffd700; }
 }
 
 /* SIDEBAR */
@@ -98,20 +110,21 @@ body{
 /* CARD STYLE & WHEEL area */
 #wheelContainer{
   width:100%;
-  max-width:500px;
-  margin:20px auto 40px auto;
-  padding:30px 15px;
-  display:flex;
-  justify-content:center;
+  margin:10px auto 20px auto;
+  padding:20px 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius:20px;
+  box-shadow:0 0 40px rgba(255,215,0,0.2);
 }
+
 
 /* wrapper for pointer + canvas */
 #wheelWrapper{
-  position: relative;
-  width: 85vwଭW;        /* 🔥 សមទំហំទូរស័ព្ទ */
-  max-width: 420px;     /* Desktop មិនអោយធំពេក */
-  aspect-ratio: 1/1;    /* 🔥 ឲ្យមូលពិតៗ */
-  margin: 0 auto;
+  position:relative;
+  width:90vw;          /* 🔥 90% ទទឹងអេក្រង់ */
+  max-width:500px;     /* កុំអោយធំពេកលើ PC */
+  aspect-ratio:1/1;
+  margin:auto;
 }
 
 .pointer{
@@ -128,13 +141,13 @@ body{
   z-index: 9999;             /* 🔥 សំខាន់ */
 }
 canvas{
-  width: 100%;
-  height: 100%;
+  width:100%;
+  height:100%;
   border-radius:50%;
-  border:14px solid gold;
-  box-sizing:border-box;
+  border:16px solid gold;
+  box-shadow:0 0 40px rgba(255,215,0,0.6);
+  background: radial-gradient(circle, #111 0%, #000 100%);
 }
-
 
 /* SPIN BUTTON */
 button{
@@ -227,6 +240,17 @@ button:hover{
   color:white;
   box-shadow:0 0 15px #999;
 }
+@media (max-width: 600px){
+
+  #wheelWrapper{
+    width:95vw;   /* 🔥 ជិតពេញអេក្រង់ */
+  }
+
+  button{
+    width:85%;
+  }
+
+}
 
 </style>
 </head>
@@ -244,30 +268,35 @@ if(!token){
 <div class="topbar">
 
   <!-- LEFT -->
-  <div class="left">
+  <div class="nav-left">
     <div class="menu-btn" onclick="toggleMenu()">☰</div>
   </div>
 
-  <!-- CENTER -->
-  <div class="center">
-    🎉 Player Dashboard
+  <!-- CENTER LOGO -->
+  <div class="nav-center">
+    🎉 <span>Player Dashboard</span>
   </div>
 
-  <!-- RIGHT -->
-  <div class="right user-info">
-    👤 <span id="username"></span>
-    <span class="balance">
+  <!-- RIGHT USER AREA -->
+  <div class="nav-right">
+    <div class="user-box">
+      👤 <span id="username"></span>
+    </div>
+
+    <div class="spin-box">
       🎯 <span id="topSpins">0</span>
-    </span>
+    </div>
   </div>
 
 </div>
+
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-  <a href="#" onclick="showGame()">🎡 Spin Game</a>
-  <a href="#" onclick="showHistory()">📜 My History</a>
+  <a href="#" onclick="showGame(); closeMenu()">🎡 Spin Game</a>
+  <a href="#" onclick="showHistory(); closeMenu()">📜 My History</a>
   <a href="#" onclick="logout()">🚪 Logout</a>
 </div>
+
 
 <!-- CONTENT -->
 <div class="content">
@@ -324,7 +353,8 @@ document.getElementById("username").innerText = decoded.username;
 
 // ----- MENU / LOGOUT / SECTION -----
 function toggleMenu(){
-  document.getElementById("sidebar").classList.toggle("active");
+  const sidebar = document.getElementById("sidebar");
+  sidebar.classList.toggle("active");
 }
 
 function logout(){
@@ -343,7 +373,23 @@ function showHistory(){
   document.getElementById("historySection").style.display="block";
   loadHistory();
 }
+function closeMenu(){
+  document.getElementById("sidebar").classList.remove("active");
+}
 
+// Close sidebar when clicking outside
+document.addEventListener("click", function(e){
+  const sidebar = document.getElementById("sidebar");
+  const menuBtn = document.querySelector(".menu-btn");
+
+  if(
+    sidebar.classList.contains("active") &&
+    !sidebar.contains(e.target) &&
+    !menuBtn.contains(e.target)
+  ){
+    sidebar.classList.remove("active");
+  }
+});
 /* ------------------------------------ */
 /* --------- Draw wheel style ---------- */
 /* ------------------------------------ */
