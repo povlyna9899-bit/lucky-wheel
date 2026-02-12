@@ -19,27 +19,24 @@ body{
   width:100%;
   background: rgba(0,0,0,0.6);
   backdrop-filter: blur(10px);
-  padding:15px 30px;
+  padding:12px 15px;
   display:flex;
-  justify-content:space-between;
   align-items:center;
-  box-sizing:border-box;
+  justify-content:space-between;
   border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
-.menu-btn{
-  font-size:22px;
-  cursor:pointer;
-  transition:0.3s;
-}
-.menu-btn:hover{
-  color:gold;
+.topbar .center{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font-weight:bold;
 }
 
 .user-info{
   display:flex;
   align-items:center;
-  gap:15px;
+  gap:10px;
   font-weight:bold;
   color:#00ffcc;
 }
@@ -50,7 +47,6 @@ body{
   border-radius:20px;
   color:black;
   box-shadow:0 0 10px gold;
-  animation: balanceGlow 1.5s infinite alternate;
 }
 
 @keyframes balanceGlow{
@@ -242,20 +238,26 @@ if(!token){
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <div class="menu-btn" onclick="toggleMenu()">☰</div>
 
-  <div style="flex:1;text-align:center;font-weight:bold;">
+  <!-- LEFT -->
+  <div class="left">
+    <div class="menu-btn" onclick="toggleMenu()">☰</div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center">
     🎉 Player Dashboard
   </div>
 
-  <div class="user-info">
+  <!-- RIGHT -->
+  <div class="right user-info">
     👤 <span id="username"></span>
     <span class="balance">
-      💰 $<span id="topBalance">0</span>
+      🎯 <span id="topSpins">0</span>
     </span>
   </div>
-</div>
 
+</div>
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
   <a href="#" onclick="showGame()">🎡 Spin Game</a>
@@ -469,7 +471,7 @@ canvas.style.transform = `rotate(${totalRotation}deg)`;
       "🎉  អ្នកឈ្នះ: "+data.prize+
       " | Remaining Spins: "+data.spinsLeft;
 
-    document.getElementById("topBalance").innerText = data.balance;
+    document.getElementById("topSpins").innerText = data.spinsLeft;
     spinning = false;
   },6000);
 }
@@ -510,12 +512,7 @@ async function loadMySpin(){
   });
   const data = await res.json();
 
-  // update balance shown in top bar
-  document.getElementById("topBalance").innerText = data.balance;
-
-  // also optionally update result area (uncomment if desired)
-  // document.getElementById("result").innerText =
-  //   "🎯 Remaining Spins: " + data.spinsLeft + " | Balance: $" + data.balance;
+  document.getElementById("topSpins").innerText = data.spinsLeft;
 }
 loadMySpin();
 
