@@ -19,24 +19,27 @@ body{
   width:100%;
   background: rgba(0,0,0,0.6);
   backdrop-filter: blur(10px);
-  padding:12px 15px;
+  padding:15px 30px;
   display:flex;
-  align-items:center;
   justify-content:space-between;
+  align-items:center;
+  box-sizing:border-box;
   border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
-.topbar .center{
-  position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  font-weight:bold;
+.menu-btn{
+  font-size:22px;
+  cursor:pointer;
+  transition:0.3s;
+}
+.menu-btn:hover{
+  color:gold;
 }
 
 .user-info{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:15px;
   font-weight:bold;
   color:#00ffcc;
 }
@@ -47,6 +50,7 @@ body{
   border-radius:20px;
   color:black;
   box-shadow:0 0 10px gold;
+  animation: balanceGlow 1.5s infinite alternate;
 }
 
 @keyframes balanceGlow{
