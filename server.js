@@ -4,13 +4,22 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
-
 const app = express();
 
 /* ===================== CONNECT MONGODB ===================== */
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ Mongo Error:", err));
+
+/* ===================== PRIZE SETTING MODEL ===================== */
+const prizeSettingSchema = new mongoose.Schema({
+  values: {
+    type: Map,
+    of: Number
+  }
+});
+
+const PrizeSetting = mongoose.model("PrizeSetting", prizeSettingSchema);
 
 /* ===================== MIDDLEWARE ===================== */
 app.use(express.json());
@@ -55,6 +64,82 @@ function verifyToken(req, res, next) {
     return res.status(403).json({ message: "Invalid or expired token" });
   }
 }
+/* ===================== PRIZE SETTINGS API ===================== */
+
+// GET current probability
+app.get("/api/admin/prize-settings", verifyToken, async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin Only" });
+
+  try {
+    let setting = await PrizeSetting.findOne();
+
+    // ✅ FIX PROPER CHECK FOR MAP
+    if (!setting || !setting.values || setting.values.size === 0) {
+      setting = await PrizeSetting.findOneAndUpdate(
+        {},
+        {
+          values: {
+            0: 50,
+            5: 10,
+            10: 10,
+            20: 10,
+            30: 10,
+            50: 5,
+            100:4,
+            200:1
+          }
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    // ✅ IMPORTANT: convert Map → object properly
+    const valuesObject = setting.values instanceof Map
+      ? Object.fromEntries(setting.values)
+      : setting.values;
+
+    const result = Object.entries(valuesObject).map(([value, weight]) => ({
+      value: Number(value),
+      weight: Number(weight)
+    }));
+
+    res.json(result);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+// SAVE probability (ADMIN)
+app.post("/api/admin/prize-settings", verifyToken, async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin Only" });
+
+  try {
+    const prizes = req.body; // expect array [{value, weight}]
+
+    if (!Array.isArray(prizes))
+      return res.status(400).json({ message: "Invalid data format" });
+
+    const valuesObject = {};
+    prizes.forEach(p => {
+      valuesObject[p.value] = Number(p.weight);
+    });
+
+    await PrizeSetting.findOneAndUpdate(
+      {},
+      { values: valuesObject },
+      { upsert: true }
+    );
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error saving data" });
+  }
+});
 
 /* ===================== ADMIN LOGIN ===================== */
 app.post("/admin-login", (req, res) => {
@@ -209,54 +294,55 @@ app.post("/spin", verifyToken, async (req, res) => {
   if (user.spinsLeft <= 0)
     return res.status(400).json({ message: "No spins remaining" });
 
- // 🎯 Prize + Probability (%)
-const prizeConfig = [
-  { value: 0,   weight: 50 },
-  { value: 5,   weight: 25 },
-  { value: 10,  weight: 15 },
-  { value: 20,  weight: 10 },
-  { value: 30,  weight: 5 },
-  { value: 50,  weight: 3 },
-  { value: 100, weight: 2 }
-];
+  // 🎯 Load probability
+  let setting = await PrizeSetting.findOne();
 
-// weighted random
-function getWeightedPrize(config){
-  const totalWeight = config.reduce((sum,p)=>sum+p.weight,0);
+  if (!setting || !setting.values)
+    return res.status(500).json({ message: "Prize settings not found" });
+
+  // ✅ FIX MAP CONVERSION (សំខាន់បំផុត)
+  const valuesObject =
+    setting.values instanceof Map
+      ? Object.fromEntries(setting.values)
+      : setting.values;
+
+  const prizeConfig = Object.entries(valuesObject).map(([value, weight]) => ({
+    value: Number(value),
+    weight: Number(weight)
+  }));
+
+  // 🎯 Weighted random
+  const totalWeight = prizeConfig.reduce((sum, p) => sum + p.weight, 0);
   const random = Math.random() * totalWeight;
 
   let cumulative = 0;
-  for(const item of config){
+  let selectedPrize = 0;
+
+  for (const item of prizeConfig) {
     cumulative += item.weight;
-    if(random <= cumulative){
-      return item.value;
+    if (random <= cumulative) {
+      selectedPrize = item.value;
+      break;
     }
   }
-  return config[0].value;
-}
 
-const randomPrize = getWeightedPrize(prizeConfig);
-
-
+  // ✅ Update user
   user.spinsLeft -= 1;
-  user.balance += randomPrize;
-
+  user.balance += selectedPrize;
   await user.save();
 
   await Spin.create({
     userId: user._id,
     username: user.username,
-    prize: randomPrize
+    prize: selectedPrize
   });
 
   res.json({
-    prize: randomPrize,
+    prize: selectedPrize,
     spinsLeft: user.spinsLeft,
     balance: user.balance
   });
 });
-
-
 /* ===================== ADMIN SEE ALL SPINS ===================== */
 app.get("/api/spins", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
