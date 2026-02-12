@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Player Dashboard</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+
+<style>
+body{
+  margin:0;
+  font-family: 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #1b2735, #090a0f);
+  color:white;
+  overflow-x:hidden;
+}
+
+/* TOP BAR */
+.topbar{
+  width:100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  padding:15px 30px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-sizing:border-box;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.menu-btn{
+  font-size:22px;
+  cursor:pointer;
+  transition:0.3s;
+}
+.menu-btn:hover{
+  color:gold;
+}
+
+.user-info{
+  display:flex;
+  align-items:center;
+  gap:15px;
+  font-weight:bold;
+  color:#00ffcc;
+}
+
+.balance{
+  background:linear-gradient(45deg,gold,orange);
+  padding:6px 12px;
+  border-radius:20px;
+  color:black;
+  box-shadow:0 0 10px gold;
+  animation: balanceGlow 1.5s infinite alternate;
+}
+
+@keyframes balanceGlow{
+  from{ box-shadow:0 0 5px gold; }
+  to{ box-shadow:0 0 20px gold; }
+}
+
+/* SIDEBAR */
+.sidebar{
+  position:fixed;
+  left:-220px;
+  top:0;
+  width:220px;
+  height:100%;
+  background: rgba(0,0,0,0.9);
+  transition:0.3s;
+  padding-top:70px;
+  box-shadow:5px 0 20px rgba(0,0,0,0.5);
+}
+
+.sidebar a{
+  display:block;
+  padding:15px 20px;
+  color:white;
+  text-decoration:none;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  transition:0.3s;
+}
+
+.sidebar a:hover{
+  background:gold;
+  color:rgb(255, 0, 0);
+}
+
+.sidebar.active{
+  left:0;
+}
+
+/* CONTENT */
+.content{
+  text-align:center;
+  padding:40px 20px;
+}
+
+/* CARD STYLE & WHEEL area */
+#wheelContainer{
+  width:480px;
+  margin:20px auto 40px auto;
+  padding:40px 20px;
+  background: rgba(255,255,255,0.05);
+  border-radius:20px;
+  box-shadow:0 0 40px rgba(255,215,0,0.2);
+}
+
+/* wrapper for pointer + canvas */
+#wheelWrapper{
+  position:relative;
+  width:420px;
+  height: 420px;
+  margin:auto;
+}
+
+.pointer{
+  position:absolute;
+  top:-10px;
+  left:50%;
+  transform:translateX(-50%) rotate(180deg);
+  width:0;
+  height:0;
+  border-left:18px solid transparent;
+  border-right:18px solid transparent;
+  border-bottom:25px solid red;
+
+  z-index: 9999;             /* 🔥 សំខាន់ */
+}
+canvas{
+  position: relative;   /* បន្ថែម */
+  z-index: 1;           /* ទាបជាង pointer */
+  border-radius:50%;
+  border:16px solid gold;
+  box-shadow:0 0 40px rgba(255,215,0,0.6);
+  background: radial-gradient(circle, #111 0%, #000 100%);
+}
+
+/* SPIN BUTTON */
+button{
+  margin-top:25px;
+  padding:14px 35px;
+  font-size:18px;
+  font-weight:bold;
+  background: linear-gradient(45deg, gold, orange);
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 5px 20px rgba(255,215,0,0.4);
+}
+
+button:hover{
+  transform:scale(1.1);
+  box-shadow:0 8px 30px rgba(255,215,0,0.8);
+}
+
+/* RESULT */
+#result{
+  margin-top:25px;
+  font-size:24px;
+  font-weight:bold;
+  animation: glow 1s infinite alternate;
+}
+
+@keyframes glow{
+  from{ text-shadow:0 0 5px lime; }
+  to{ text-shadow:0 0 20px rgb(0, 255, 64); }
+}
+
+/* 🎬 AUTO SLIDER */
+.slider{
+  width:90%;
+  max-width:600px;
+  height:260px;
+  margin:60px auto;
+  overflow:hidden;
+  border-radius:20px;
+  box-shadow:0 0 35px rgb(0, 0, 0);
+}
+
+.slides{
+  display:flex;
+  width:300%;
+  animation: slide 20s infinite;
+}
+
+.slides img{
+  width:100%;
+  height:260px;
+  object-fit:contain;
+  background:#000;
+}
+
+@keyframes slide{
+  0%   { transform:translateX(0); }
+  33%  { transform:translateX(-100%); }
+  66%  { transform:translateX(-200%); }
+  100% { transform:translateX(0); }
+}
+
+/* MUSIC BUTTON */
+.music-btn{
+  position:fixed;
+  bottom:25px;
+  right:25px;
+  padding:12px 20px;
+  border:none;
+  border-radius:30px;
+  font-size:14px;
+  font-weight:bold;
+  cursor:pointer;
+  background:linear-gradient(45deg,#ffd700,#ff9900);
+  color:black;
+  box-shadow:0 0 15px #ffd700;
+  transition:0.3s;
+  z-index:999;
+}
+
+.music-btn:hover{
+  transform:scale(1.08);
+  box-shadow:0 0 25px #ffd700;
+}
+
+.music-off{
+  background:linear-gradient(45deg,#555,#222);
+  color:white;
+  box-shadow:0 0 15px #999;
+}
+
+</style>
+</head>
+<body>
+
+<script>
+/* 🔐 Protect Page */
+const token = localStorage.getItem("playerToken");
+if(!token){
+  window.location.href="/player-login.html";
+}
+</script>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="menu-btn" onclick="toggleMenu()">☰</div>
+
+  <div style="flex:1;text-align:center;font-weight:bold;">
+    🎉 Player Dashboard
+  </div>
+
+  <div class="user-info">
+    👤 <span id="username"></span>
+    <span class="balance">
+      💰 $<span id="topBalance">0</span>
+    </span>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <a href="#" onclick="showGame()">🎡 Spin Game</a>
+  <a href="#" onclick="showHistory()">📜 My History</a>
+  <a href="#" onclick="logout()">🚪 Logout</a>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- game -->
+  <div id="gameSection">
+    <h2>Spin & Win</h2>
+
+    <!-- wheel -->
+    <div id="wheelContainer">
+      <div id="wheelWrapper">
+        <div class="pointer"></div>
+        <canvas id="wheelCanvas" width="420" height="420"></canvas>
+      </div>
+    </div>
+     
+    <button onclick="spinWheel()">🎡 SPIN</button>
+    <div id="result"></div>
+  </div>
+
+  <!-- history -->
+  <div id="historySection" style="display:none;">
+    <h2>My Spin History</h2>
+    <div id="historyData">Loading...</div>
+  </div>
+
+  <!-- slider -->
+  <div class="slider">
+    <div class="slides">
+      <img src="img/poster1.jpg" alt="Poster 1">
+      <img src="img/poster2.jpg" alt="Poster 2">
+      <img src="img/poster3.jpg" alt="Poster 3">
+    </div>
+  </div>
+
+</div>
+
+<!-- Music -->
+<audio id="casinoMusic" loop autoplay muted>
+  <source src="/music.mp3" type="audio/mpeg">
+</audio>
+
+<button id="musicToggle" class="music-btn">
+  🔊 MUSIC ON
+</button>
+
+<script>
+// ----- parse token to get username -----
+function parseJwt(token){
+  return JSON.parse(atob(token.split('.')[1]));
+}
+const decoded = parseJwt(token);
+document.getElementById("username").innerText = decoded.username;
+
+// ----- MENU / LOGOUT / SECTION -----
+function toggleMenu(){
+  document.getElementById("sidebar").classList.toggle("active");
+}
+
+function logout(){
+  // keep musicState if you want, but remove token only
+  localStorage.removeItem("playerToken");
+  window.location.href="/player-login.html";
+}
+
+function showGame(){
+  document.getElementById("gameSection").style.display="block";
+  document.getElementById("historySection").style.display="none";
+}
+
+function showHistory(){
+  document.getElementById("gameSection").style.display="none";
+  document.getElementById("historySection").style.display="block";
+  loadHistory();
+}
+
+/* ------------------------------------ */
+/* --------- Draw wheel style ---------- */
+/* ------------------------------------ */
+
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+
+// new wheel data to match green/white real wheel style
+const prizes = [
+  { value: 0,  label: "0$" },
+  { value: 5,  label: "5$" },
+  { value: 10, label: "10$" },
+  { value: 20, label: "20$" },
+  { value: 30, label: "30$" },
+  { value: 50, label: "50$" },
+  { value: 100,label: "100$" },
+  { value: 200,label: "200$" }   // 🔥 ថ្មី
+];
+
+let currentRotation = 0;   // 🔥 រក្សាមុំចាស់
+let spinning = false;
+
+
+function drawWheel(){
+  ctx.clearRect(0,0,420,420);
+  const arc = 2*Math.PI/prizes.length;
+  ctx.font = "bold 14px Segoe UI";
+  ctx.textAlign = "right";
+
+  for(let i=0;i<prizes.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(210,210);
+    ctx.fillStyle = (i % 2 === 0)
+  ? "#ffd700"   // gold
+  : "#1a1a1a";  // dark black
+    ctx.arc(210,210,210,
+  i * arc - Math.PI/2,
+  (i + 1) * arc - Math.PI/2
+);
+
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(210,210);
+    ctx.rotate(i*arc + arc/2 - Math.PI/2);
+    ctx.fillStyle = (i % 2 === 0)
+  ? "#000"      // black text on gold
+  : "#ffd700";  // gold text on black
+    ctx.fillText(prizes[i].label,170,10);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+/* ------------------------------------ */
+/* --------- Spin logic -------------- */
+/* ------------------------------------ */
+
+async function spinWheel(){
+  if(spinning) return;
+
+  const res = await fetch("/spin",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+token }
+  });
+
+  const data = await res.json();
+
+  console.log("Server prize:", data.prize, typeof data.prize); // debug
+
+  if(!res.ok){
+    alert(data.message);
+    return;
+  }
+
+  spinning = true;
+
+  // កំណត់ index
+  let index = -1;
+
+  // ប្រសិនបើ prize ជា number
+  if(typeof data.prize === "number"){
+    index = prizes.findIndex(p => p.value === data.prize);
+  } else {
+    // ប្រសិនបើ prize ជា string
+    // អាចមាន "50$" ឬ​ ឬ "Try Again"
+    // ជាមួយ label ឬ value
+    index = prizes.findIndex(p => p.label === data.prize);
+    // បើត្រូវតែដក $ ឲ្យប្រៀបប្រដាប់
+    if(index < 0){
+      // try to parse number from string
+      const num = parseInt(data.prize.replace(/[^0-9]/g, ""));
+      if(!isNaN(num)){
+        index = prizes.findIndex(p => p.value === num);
+      }
+    }
+  }
+
+  if(index < 0){
+    // fallback
+    index = 0;
+  }
+
+const sliceDeg = 360 / prizes.length;
+
+// គណនា degree ចុងក្រោយត្រឹមត្រូវ
+const finalDeg = 360 - (index * sliceDeg) - sliceDeg / 2;
+
+// បង្វិល 5 ជុំ ហើយបញ្ឈប់ត្រឹម slice
+const totalRotation = 360 * 5 + finalDeg;
+
+// RESET rotation មុន
+canvas.style.transition = "none";
+canvas.style.transform = "rotate(0deg)";
+
+// បង្ខំ browser reflow
+void canvas.offsetWidth;
+
+// បង្វិលថ្មី
+canvas.style.transition = "transform 6s cubic-bezier(.15,.85,.25,1)"
+canvas.style.transform = `rotate(${totalRotation}deg)`;
+
+
+  setTimeout(()=>{
+    document.getElementById("result").innerText =
+      "🎉  អ្នកឈ្នះ: "+data.prize+
+      " | Remaining Spins: "+data.spinsLeft;
+
+    document.getElementById("topBalance").innerText = data.balance;
+    spinning = false;
+  },6000);
+}
+
+/* ------------------------------------ */
+/* --------- History ------------------ */
+/* ------------------------------------ */
+async function loadHistory(){
+  const res = await fetch("/api/history",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+
+  const data = await res.json();
+
+  if(!data.length){
+    document.getElementById("historyData").innerHTML="No spins yet.";
+    return;
+  }
+
+  let html="";
+  data.forEach(d=>{
+    html += `
+      <div style="padding:10px;border-bottom:1px solid #444;">
+        🎁 $${d.prize}<br>
+        📅 ${new Date(d.createdAt).toLocaleString()}
+      </div>
+    `;
+  });
+  document.getElementById("historyData").innerHTML=html;
+}
+
+/* ------------------------------------ */
+/* --------- Load balance on start ---- */
+/* ------------------------------------ */
+async function loadMySpin(){
+  const res = await fetch("/api/my-spin",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+
+  // update balance shown in top bar
+  document.getElementById("topBalance").innerText = data.balance;
+
+  // also optionally update result area (uncomment if desired)
+  // document.getElementById("result").innerText =
+  //   "🎯 Remaining Spins: " + data.spinsLeft + " | Balance: $" + data.balance;
+}
+loadMySpin();
+
+/* ------------------------------------ */
+/* --------- Music toggle ------------ */
+/* ------------------------------------ */
+document.addEventListener("DOMContentLoaded", function () {
+  const musicBtn = document.getElementById("musicToggle");
+  const casinoMusic = document.getElementById("casinoMusic");
+
+  // Read from localStorage (data saved across sessions).  
+  // localStorage persists across browser sessions according to MDN docs. :contentReference[oaicite:0]{index=0}
+  let state = localStorage.getItem("musicState") || "on";
+
+  function updateMusic(){
+    if(state === "on"){
+      casinoMusic.muted = false;
+      musicBtn.innerText = "🔊 MUSIC ON";
+      casinoMusic.play().catch(()=>{});
+    } else {
+      casinoMusic.muted = true;
+      musicBtn.innerText = "🔇 MUSIC OFF";
+    }
+  }
+
+  updateMusic();
+
+  musicBtn.addEventListener("click", ()=>{
+    state = (state === "on") ? "off" : "on";
+    localStorage.setItem("musicState", state);
+    updateMusic();
+  });
+});
+</script>
+
+</body>
+</html>
