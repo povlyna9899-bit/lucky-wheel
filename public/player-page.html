@@ -2,10 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Player Dashboard</title>
+<title>Lucky wheel SB24 Chines new year</title>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
+
 body{
   margin:0;
   font-family:'Segoe UI', sans-serif;
@@ -14,10 +16,12 @@ body{
   overflow-x:hidden;
 
   background:
-    radial-gradient(circle at 50% 30%, rgba(255,215,0,0.12), transparent 60%),
-    linear-gradient(to bottom, #000000, #0a0a0a 50%, #000000);
+    linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.75)),
+    url("img/bg.jpg");   /* 👉 ដាក់ path រូបទីនេះ */
 
-  background-attachment: fixed;
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
 }
 /* Spark gold background */
 body::before{
@@ -25,11 +29,43 @@ body::before{
   position:fixed;
   inset:0;
   background:
-    radial-gradient(circle at center, rgba(255,180,0,0.35), transparent 60%),
-    radial-gradient(circle at 30% 40%, rgba(255,140,0,0.25), transparent 70%),
-    radial-gradient(circle at 70% 60%, rgba(255,200,0,0.2), transparent 70%);
+    radial-gradient(circle at center, rgba(255,80,0,0.35), transparent 60%),
+    radial-gradient(circle at 30% 40%, rgba(255,140,0,0.25), transparent 70%);
   filter:blur(120px);
   z-index:-1;
+}
+.firework{
+  position:fixed;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:99999;
+  animation: explode 1s ease-out forwards;
+}
+
+@keyframes explode{
+  0%{
+    transform:scale(0.3);
+    opacity:1;
+  }
+  100%{
+    transform:scale(4);
+    opacity:0;
+  }
+}
+#fireworksContainer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:999999; /* លើគេ */
+}
+
+.firework{
+  position:absolute;
+  width:6px;
+  height:6px;
+  border-radius:50%;
 }
 
 /* TOP BAR */
@@ -47,6 +83,24 @@ body::before{
   border-bottom:1px solid rgba(255,215,0,0.3);
   background:#000;
   border-bottom:1px solid rgba(255,215,0,0.3);
+}
+.menu-btn{
+  font-size:28px;
+  cursor:pointer;
+  padding:10px 18px;
+  border-radius:12px;
+
+  background:linear-gradient(145deg,#ffd700,#ff9900);
+  color:black;
+  font-weight:bold;
+
+  box-shadow:0 0 15px rgba(255,215,0,0.6);
+  transition:0.3s;
+}
+
+.menu-btn:hover{
+  transform:scale(1.15);
+  box-shadow:0 0 25px rgba(255,215,0,1);
 }
 
 /* CENTER TITLE */
@@ -77,19 +131,24 @@ body::before{
 /* SPIN BOX */
 .spin-box{
   background:linear-gradient(45deg,#ffd700,#ff9900);
-  padding:10px 18px;
+  padding:12px 25px;
   border-radius:50px;
-  font-size:16px;
+  font-size:18px;
   font-weight:bold;
   color:black;
-  box-shadow:0 0 12px #ffd700;
-  animation:spinGlow 1.5s infinite alternate;
+
+  box-shadow:0 0 20px rgba(255,215,0,0.7);
+
+  animation:pulse 1.5s infinite;
+}
+.spin-box.stop{
+  animation:none;
+  opacity:0.6;
+  transform:scale(1);
+  box-shadow:0 0 10px rgba(255,215,0,0.3);
 }
 
-@keyframes spinGlow{
-  from{ box-shadow:0 0 5px #ffd700; }
-  to{ box-shadow:0 0 20px #ffd700; }
-}
+
 
 /* SIDEBAR */
 .sidebar{
@@ -106,12 +165,18 @@ body::before{
 
 .sidebar a{
   display:block;
-  padding:15px 20px;
-  color:white;
+  padding:18px 25px;
+  font-size:20px;      /* 🔥 ធំជាងមុន */
+  font-weight:600;
+  letter-spacing:1px;
+
+  color:#fff;
   text-decoration:none;
-  border-bottom:1px solid rgba(255,255,255,0.05);
+
+  border-bottom:1px solid rgba(255,255,255,0.08);
   transition:0.3s;
 }
+
 
 .sidebar a:hover{
   background:gold;
@@ -134,14 +199,12 @@ body::before{
   margin:40px auto;
   padding:25px;
   border-radius:70px;
-
-  background:#111;
-  border:1px solid rgba(255,225,0,0.3);
-
-  box-shadow:
-    0 0 40px rgba(255,225,0,0.3),
-    0 20px 60px rgba(0,0,0,0.8);
+  position:relative;
+ background:linear-gradient(145deg,#8b0000,#3b0000);
+  border:2px solid gold;
+  box-shadow:0 0 30px rgba(255,215,0,0.4);
 }
+
 
 /* wrapper for pointer + canvas */
 #wheelWrapper{
@@ -163,7 +226,7 @@ body::before{
   border-left:18px solid transparent;
   border-right:18px solid transparent;
   border-bottom:25px solid red;
-
+  filter: drop-shadow(0 0 12px #ff0000);
   z-index: 9999;             /* 🔥 សំខាន់ */
 }
 canvas{
@@ -171,36 +234,31 @@ canvas{
   height:100%;
   border-radius:50%;
   border:16px solid gold;
-  box-shadow:0 0 40px rgba(255,215,0,0.6);
+   box-shadow:
+    0 0 30px #ffae00,
+    0 0 60px #ff3c00,
+    0 0 120px rgba(255,80,0,0.8);
   background: radial-gradient(circle, #111 0%, #000 100%);
 }
 
 button{
   margin-top:35px;
   padding:18px 60px;
-  font-size:22px;
+  font-size:20px;
   font-weight:bold;
-  letter-spacing:1px;
+  border-radius:40px;
+  border:none;
 
-  background: linear-gradient(145deg,#ffd700,#ffb300);
+  background:linear-gradient(45deg,#ffd700,#ffb300);
   color:#000;
 
-  border:none;
-  border-radius:50px;
-  cursor:pointer;
-
-  box-shadow:
-    0 8px 25px rgba(255,215,0,0.5),
-    inset 0 2px 8px rgba(255,255,255,0.6);
-
-  transition: all 0.3s ease;
+  box-shadow:0 0 20px rgba(255,215,0,0.6);
+  transition:0.3s;
 }
 
 button:hover{
-  transform:scale(1.12);
-  box-shadow:
-    0 12px 35px rgba(255,215,0,0.9),
-    inset 0 2px 10px rgba(255,255,255,0.8);
+  transform:scale(1.08);
+  box-shadow:0 0 30px rgba(255,215,0,1);
 }
 .card{
   background:#111;
@@ -253,6 +311,20 @@ button:hover{
   66%  { transform:translateX(-200%); }
   100% { transform:translateX(0); }
 }
+@keyframes pulse{
+  0%{
+    transform:scale(1);
+    box-shadow:0 0 10px rgba(255,215,0,0.6);
+  }
+  50%{
+    transform:scale(1.15);
+    box-shadow:0 0 30px rgba(255,215,0,1);
+  }
+  100%{
+    transform:scale(1);
+    box-shadow:0 0 10px rgba(255,215,0,0.6);
+  }
+}
 
 /* MUSIC BUTTON */
 .music-btn{
@@ -289,11 +361,50 @@ button:hover{
     padding:18px 0;
   }
 }
+.social-buttons{
+    margin-top:100px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    flex-wrap:wrap; /* សម្រាប់ mobile */
+}
 
+
+.social-btn{
+  margin-right:8px;
+  font-size:18px;
+  width:250px;
+  padding:12px;
+  text-align:center;
+  border-radius:30px;
+  font-weight:bold;
+  text-decoration:none;
+  color:white;
+  transition:0.3s;
+  box-shadow:0 0 10px rgba(255,140,0,0.6);
+}
+
+.telegram{
+  background:#0088cc;
+}
+
+.facebook{
+  background:#1877f2;
+}
+
+.channel{
+  background:#ff8c00;
+}
+
+.social-btn:hover{
+  transform:scale(1.05);
+  box-shadow:0 0 20px orange;
+}
 </style>
 </head>
 <body>
-
+<div id="fireworksContainer"></div>
 <script>
 /* 🔐 Protect Page */
 const token = localStorage.getItem("playerToken");
@@ -312,7 +423,7 @@ if(!token){
 
   <!-- CENTER LOGO -->
   <div class="nav-center">
-    🎉 <span>Player Dashboard</span>
+    🧧 <span>Lucky wheel SB24 Chines new yea</span>
   </div>
 
   <!-- RIGHT USER AREA -->
@@ -325,7 +436,6 @@ if(!token){
       🎯 <span id="topSpins">0</span>
     </div>
   </div>
-
 </div>
 
 <!-- SIDEBAR -->
@@ -369,7 +479,19 @@ if(!token){
       <img src="img/poster3.jpg" alt="Poster 3">
     </div>
   </div>
+  <div class="social-buttons">
+   <a href="#" class="social-btn telegram">
+      <i class="fab fa-telegram"></i> Telegram Support
+   </a>
 
+   <a href="#" class="social-btn facebook">
+      <i class="fab fa-facebook"></i> Facebook Page
+   </a>
+
+   <a href="#" class="social-btn channel">
+      <i class="fab fa-telegram"></i> Telegram Channel
+   </a>
+</div>
 </div>
 
 <!-- Music -->
@@ -382,6 +504,17 @@ if(!token){
 </button>
 
 <script>
+  //---------spin stop-----------//
+  function checkSpinAnimation(spins){
+  const spinBox = document.querySelector(".spin-box");
+
+  if(spins <= 0){
+    spinBox.classList.add("stop");
+  }else{
+    spinBox.classList.remove("stop");
+  }
+}
+
 // ----- parse token to get username -----
 function parseJwt(token){
   return JSON.parse(atob(token.split('.')[1]));
@@ -554,14 +687,23 @@ canvas.style.transition = "transform 6s cubic-bezier(.15,.85,.25,1)"
 canvas.style.transform = `rotate(${totalRotation}deg)`;
 
 
-  setTimeout(()=>{
-    document.getElementById("result").innerText =
-      "🎉  អ្នកឈ្នះ: "+data.prize+
-      " | Remaining Spins: "+data.spinsLeft;
+ setTimeout(()=>{
 
-    document.getElementById("topSpins").innerText = data.spinsLeft;
-    spinning = false;
-  },6000);
+  document.getElementById("result").innerText =
+    "🎉  អ្នកឈ្នះ: "+data.prize+
+    " | Remaining Spins: "+data.spinsLeft;
+
+  document.getElementById("topSpins").innerText = data.spinsLeft;
+  checkSpinAnimation(data.spinsLeft);
+
+  createFirework();
+  createFirework();
+  createFirework();
+
+  spinning = false;
+
+},6000);
+
 }
 
 /* ------------------------------------ */
@@ -633,7 +775,47 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("musicState", state);
     updateMusic();
   });
+
 });
+function createFirework(){
+
+  const container = document.getElementById("fireworksContainer");
+
+  const x = Math.random() * window.innerWidth;
+  const y = Math.random() * window.innerHeight * 0.6;
+
+  for(let i=0;i<35;i++){
+
+    const particle = document.createElement("div");
+    particle.className = "firework";
+
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = Math.random() * 150;
+
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance;
+
+    particle.style.left = x + "px";
+    particle.style.top = y + "px";
+    particle.style.background =
+      `hsl(${Math.random()*360},100%,60%)`;
+
+    particle.animate([
+      { transform: "translate(0,0)", opacity:1 },
+      { transform: `translate(${dx}px,${dy}px)`, opacity:0 }
+    ],{
+      duration:1200,
+      easing:"ease-out"
+    });
+
+    container.appendChild(particle);
+
+    setTimeout(()=>{
+      particle.remove();
+    },1200);
+  }
+}
+
 </script>
 
 </body>
