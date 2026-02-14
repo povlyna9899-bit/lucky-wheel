@@ -34,14 +34,44 @@ body::before{
   filter:blur(120px);
   z-index:-1;
 }
+/* ===== FLASH EFFECT ===== */
+.flash{
+  position:fixed;
+  inset:0;
+  background:radial-gradient(circle, rgba(255,215,0,0.8), transparent 70%);
+  z-index:99998;
+  animation: flashAnim 0.6s ease-out forwards;
+}
+
+@keyframes flashAnim{
+  from{ opacity:1; }
+  to{ opacity:0; }
+}
+
+/* ===== SCREEN SHAKE ===== */
+@keyframes shake{
+  0%{ transform:translate(0,0); }
+  25%{ transform:translate(5px,-5px); }
+  50%{ transform:translate(-5px,5px); }
+  75%{ transform:translate(5px,5px); }
+  100%{ transform:translate(0,0); }
+}
+
+.shake{
+  animation:shake 0.1s;
+}
 .firework{
   position:fixed;
-  width:6px;
-  height:6px;
+  width:10px;
+  height:10px;
   border-radius:50%;
   pointer-events:none;
   z-index:99999;
-  animation: explode 1s ease-out forwards;
+  box-shadow:
+    0 0 10px #fff,
+    0 0 20px #ff0,
+    0 0 40px #ff9900,
+    0 0 80px #ff3300;
 }
 
 @keyframes explode{
@@ -54,19 +84,8 @@ body::before{
     opacity:0;
   }
 }
-#fireworksContainer{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:999999; /* លើគេ */
-}
 
-.firework{
-  position:absolute;
-  width:6px;
-  height:6px;
-  border-radius:50%;
-}
+
 
 /* TOP BAR */
 .topbar{
@@ -325,6 +344,11 @@ button:hover{
     box-shadow:0 0 10px rgba(255,215,0,0.6);
   }
 }
+@keyframes fadeOut{
+  0%{ opacity:1; }
+  80%{ opacity:1; }
+  100%{ opacity:0; }
+}
 
 /* MUSIC BUTTON */
 .music-btn{
@@ -401,6 +425,21 @@ button:hover{
   transform:scale(1.05);
   box-shadow:0 0 20px orange;
 }
+@keyframes megaPulse{
+  from{
+    transform:translate(-50%,-50%) scale(1);
+  }
+  to{
+    transform:translate(-50%,-50%) scale(1.08);
+  }
+}
+
+@keyframes fadeOut{
+  0%{ opacity:1; }
+  80%{ opacity:1; }
+  100%{ opacity:0; }
+}
+
 </style>
 </head>
 <body>
@@ -418,12 +457,12 @@ if(!token){
 
   <!-- LEFT -->
   <div class="nav-left">
-    <div class="menu-btn" onclick="toggleMenu()">☰</div>
+    <div class="menu-btn" onclick="toggleMenu()">☰</div> 
   </div>
 
   <!-- CENTER LOGO -->
   <div class="nav-center">
-    🧧 <span>Lucky wheel SB24 Chines new yea</span>
+    🧧 <span>Lucky wheel SB24 Chines New Year</span>
   </div>
 
   <!-- RIGHT USER AREA -->
@@ -463,6 +502,7 @@ if(!token){
      
     <button onclick="spinWheel()">🎡 SPIN</button>
     <div id="result"></div>
+    
   </div>
 
   <!-- history -->
@@ -495,6 +535,9 @@ if(!token){
 </div>
 
 <!-- Music -->
+ <audio id="jackpotSound">
+  <source src="jackpot.mp3" type="audio/mpeg">
+</audio>
 <audio id="casinoMusic" loop autoplay muted>
   <source src="/music.mp3" type="audio/mpeg">
 </audio>
@@ -690,19 +733,28 @@ canvas.style.transform = `rotate(${totalRotation}deg)`;
  setTimeout(()=>{
 
   document.getElementById("result").innerText =
-    "🎉  អ្នកឈ្នះ: "+data.prize+
+    "🎉 អ្នកឈ្នះ: "+data.prize+
     " | Remaining Spins: "+data.spinsLeft;
 
   document.getElementById("topSpins").innerText = data.spinsLeft;
   checkSpinAnimation(data.spinsLeft);
 
+  let count = 0;
+const interval = setInterval(()=>{
   createFirework();
-  createFirework();
-  createFirework();
+  count++;
+  if(count >= 5){
+    clearInterval(interval);
+  }
+},700);
 
+if(data.prize === 200){
+  superJackpot();
+}
   spinning = false;
 
 },6000);
+
 
 }
 
@@ -779,41 +831,99 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 function createFirework(){
 
-  const container = document.getElementById("fireworksContainer");
+  for(let burst = 0; burst < 5; burst++){
 
-  const x = Math.random() * window.innerWidth;
-  const y = Math.random() * window.innerHeight * 0.6;
+    const centerX = Math.random() * window.innerWidth;
+    const centerY = Math.random() * window.innerHeight * 0.3;
 
-  for(let i=0;i<35;i++){
+    for(let i=0;i<50;i++){
 
-    const particle = document.createElement("div");
-    particle.className = "firework";
+      const particle = document.createElement("div");
+      particle.className = "firework";
 
-    const angle = Math.random() * 2 * Math.PI;
-    const distance = Math.random() * 150;
+      const angle = Math.random() * 2 * Math.PI;
+      const distance = Math.random() * 200;
 
-    const dx = Math.cos(angle) * distance;
-    const dy = Math.sin(angle) * distance;
+      const dx = Math.cos(angle) * distance;
+      const dy = Math.sin(angle) * distance;
 
-    particle.style.left = x + "px";
-    particle.style.top = y + "px";
-    particle.style.background =
-      `hsl(${Math.random()*360},100%,60%)`;
+      particle.style.left = centerX + "px";
+      particle.style.top = centerY + "px";
 
-    particle.animate([
-      { transform: "translate(0,0)", opacity:1 },
-      { transform: `translate(${dx}px,${dy}px)`, opacity:0 }
-    ],{
-      duration:1200,
-      easing:"ease-out"
-    });
+    particle.style.background ="radial-gradient(circle, #fff, gold, orange, red)";
+      particle.style.boxShadow =
+        "0 0 15px #fff, 0 0 30px #ffd700, 0 0 60px #ff3300";
 
-    container.appendChild(particle);
+      particle.animate([
+        { transform: "translate(0,0) scale(1)", opacity:1 },
+        { transform: `translate(${dx}px,${dy}px) scale(0.2)`, opacity:0 }
+      ],{
+        duration:900,
+        easing:"ease-out"
+      });
 
-    setTimeout(()=>{
-      particle.remove();
-    },1200);
+      document.body.appendChild(particle);
+      setTimeout(()=> particle.remove(),900);
+      
+    }
   }
+}
+
+function superJackpot(){
+
+  // 🔴 Red Overlay
+  const overlay = document.createElement("div");
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.background =
+    "radial-gradient(circle at center, rgba(255,0,0,0.85), rgba(120,0,0,0.95))";
+  overlay.style.zIndex = "99990";
+  overlay.style.animation = "fadeOut 4s forwards";
+  document.body.appendChild(overlay);
+
+  // 🎆 Fireworks
+  let count = 0;
+  const interval = setInterval(()=>{
+    createFirework();
+    count++;
+    if(count >= 8){
+      clearInterval(interval);
+    }
+  },250);
+
+  // 👑 HORIZONTAL TEXT
+  const jackpotText = document.createElement("div");
+  jackpotText.innerText = "🧧 200$ MEGA JACKPOT 🧧";
+  jackpotText.style.position = "fixed";
+  jackpotText.style.top = "50%";
+  jackpotText.style.left = "50%";
+  jackpotText.style.transform = "translate(-50%, -50%)";
+  jackpotText.style.fontSize = "42px";
+  jackpotText.style.fontWeight = "900";
+  jackpotText.style.whiteSpace = "nowrap";   // 🔥 មិនឲ្យចុះបន្ទាត់
+  jackpotText.style.color = "#FFD700";
+  jackpotText.style.letterSpacing = "2px";
+  jackpotText.style.textShadow =
+    "0 0 15px red, 0 0 30px orange, 0 0 60px gold";
+  jackpotText.style.zIndex = "999999";
+  jackpotText.style.animation = "megaPulse 1s infinite alternate";
+  document.body.appendChild(jackpotText);
+
+  setTimeout(()=>{
+    jackpotText.remove();
+    overlay.remove();
+  },4000);
+
+  // 📳 Shake
+  document.body.classList.add("shake");
+  setTimeout(()=>{
+    document.body.classList.remove("shake");
+  },800);
+
+  // 🔊 Sound
+  const sound = document.getElementById("jackpotSound");
+  sound.currentTime = 0;
+  sound.play().catch(()=>{});
 }
 
 </script>
