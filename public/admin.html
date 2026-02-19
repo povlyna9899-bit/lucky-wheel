@@ -379,18 +379,52 @@ function renderHistory(data){
   }
 
   data.forEach(item=>{
-    total+=item.prize;
-    box.innerHTML+=`
-      <div style="padding:8px;border-bottom:1px solid #ddd;">
+  total+=item.prize;
+  box.innerHTML+=`
+    <div style="padding:8px;border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
+      
+      <div>
         🎁 $${item.prize} |
         📅 ${new Date(item.createdAt).toLocaleString()}
       </div>
-    `;
-  });
+
+      <button class="btn danger"
+        onclick="clearHistory('${item._id}')">
+        Clear
+      </button>
+
+    </div>
+  `;
+});
 
   document.getElementById("totalReward").innerText=total;
 }
+/* CLEAR HISTORY */
+function clearHistory(id) {
+  if (!confirm("Delete this history?")) return;
 
+  fetch("/admin/clear-history/" + id, {
+    method: "DELETE",
+    headers: {
+      "Authorization": "Bearer " + token
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      // reload history បច្ចុប្បន្នវិញ
+      renderHistory(
+        currentHistory.filter(item => item._id !== id)
+      );
+
+      // update currentHistory
+      currentHistory = currentHistory.filter(item => item._id !== id);
+
+    } else {
+      alert("Delete failed");
+    }
+  });
+}
 /* FILTER */
 function filterHistory(){
   const start=document.getElementById("startDate").value;

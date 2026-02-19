@@ -15,23 +15,27 @@ body{
   color:white;
   overflow-x:hidden;
 
-  background:
-    linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.75)),
-    url("img/bg.jpg");   /* 👉 ដាក់ path រូបទីនេះ */
-
   background-size:cover;
   background-position:center;
   background-attachment:fixed;
 }
-/* Spark gold background */
+#bgVideo{
+  position:fixed;
+  right:0;
+  bottom:0;
+  min-width:100%;
+  min-height:100%;
+  object-fit:cover;
+  z-index:-2;
+  
+}
+
+/* dark overlay ដើម្បីអោយអក្សរច្បាស់ */
 body::before{
   content:"";
   position:fixed;
   inset:0;
-  background:
-    radial-gradient(circle at center, rgba(255,80,0,0.35), transparent 60%),
-    radial-gradient(circle at 30% 40%, rgba(255,140,0,0.25), transparent 70%);
-  filter:blur(120px);
+  background:rgba(0,0,0,0.6);
   z-index:-1;
 }
 /* ===== FLASH EFFECT ===== */
@@ -425,24 +429,15 @@ button:hover{
   transform:scale(1.05);
   box-shadow:0 0 20px orange;
 }
-@keyframes megaPulse{
-  from{
-    transform:translate(-50%,-50%) scale(1);
-  }
-  to{
-    transform:translate(-50%,-50%) scale(1.08);
-  }
-}
 
-@keyframes fadeOut{
-  0%{ opacity:1; }
-  80%{ opacity:1; }
-  100%{ opacity:0; }
-}
 
 </style>
 </head>
 <body>
+  <video autoplay muted loop playsinline id="bgVideo">
+  <source src="video/bg.mp4" type="video/mp4">
+</video>
+
 <div id="fireworksContainer"></div>
 <script>
 /* 🔐 Protect Page */
@@ -520,16 +515,16 @@ if(!token){
     </div>
   </div>
   <div class="social-buttons">
-   <a href="#" class="social-btn telegram">
+   <a href="https://t.me/csbet22hour" class="social-btn telegram">
       <i class="fab fa-telegram"></i> Telegram Support
    </a>
 
-   <a href="#" class="social-btn facebook">
+   <a href="https://web.facebook.com/profile.php?id=61562163052595" class="social-btn facebook">
       <i class="fab fa-facebook"></i> Facebook Page
    </a>
 
-   <a href="#" class="social-btn channel">
-      <i class="fab fa-telegram"></i> Telegram Channel
+   <a href="https://t.me/v168khmer24" class="social-btn channel">
+      <i class="fab fa-telegram"></i> Telegram 
    </a>
 </div>
 </div>
@@ -613,14 +608,14 @@ const ctx = canvas.getContext("2d");
 
 /* 🔥 ដាក់ prizes លើគេបំផុត */
 const prizes = [
-  { value: 0,  label: "0$" },
-  { value: 5,  label: "5$" },
-  { value: 10, label: "10$" },
+  { value: 0,  label: "ព្យាយាមម្ដងទៀត" },
+  { value: 5,  label: "ថែម10%" },
+  { value: 10, label: "អ្នកឈ្នះ5$" },
   { value: 20, label: "20$" },
   { value: 30, label: "30$" },
-  { value: 50, label: "50$" },
+  { value: 50, label: "អ្នកឈ្នះ50$" },
   { value: 100,label: "100$" },
-  { value: 200,label: "200$" }
+  { value: 200,label: "I PHONE 15" }
 ];
 
 let currentRotation = 0;
@@ -630,7 +625,7 @@ let spinning = false;
 function drawWheel(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const arc = 2*Math.PI/prizes.length;
-  ctx.font = "bold 14px Segoe UI";
+  ctx.font = "bold 18px Segoe UI";
   ctx.textAlign = "right";
 
   for(let i=0;i<prizes.length;i++){
@@ -732,9 +727,11 @@ canvas.style.transform = `rotate(${totalRotation}deg)`;
 
  setTimeout(()=>{
 
-  document.getElementById("result").innerText =
-    "🎉 អ្នកឈ្នះ: "+data.prize+
-    " | Remaining Spins: "+data.spinsLeft;
+  const prizeLabel = prizes[index].label;
+
+document.getElementById("result").innerText =
+  "🎉 " + prizeLabel +
+  " | Remaining Spins: " + data.spinsLeft;
 
   document.getElementById("topSpins").innerText = data.spinsLeft;
   checkSpinAnimation(data.spinsLeft);
@@ -871,54 +868,16 @@ function createFirework(){
 
 function superJackpot(){
 
-  // 🔴 Red Overlay
-  const overlay = document.createElement("div");
-  overlay.style.position = "fixed";
-  overlay.style.inset = "0";
-  overlay.style.background =
-    "radial-gradient(circle at center, rgba(255,0,0,0.85), rgba(120,0,0,0.95))";
-  overlay.style.zIndex = "99990";
-  overlay.style.animation = "fadeOut 4s forwards";
-  document.body.appendChild(overlay);
-
+  
   // 🎆 Fireworks
   let count = 0;
   const interval = setInterval(()=>{
     createFirework();
     count++;
-    if(count >= 8){
+    if(count >= 4){
       clearInterval(interval);
     }
   },250);
-
-  // 👑 HORIZONTAL TEXT
-  const jackpotText = document.createElement("div");
-  jackpotText.innerText = "🧧 200$ MEGA JACKPOT 🧧";
-  jackpotText.style.position = "fixed";
-  jackpotText.style.top = "50%";
-  jackpotText.style.left = "50%";
-  jackpotText.style.transform = "translate(-50%, -50%)";
-  jackpotText.style.fontSize = "42px";
-  jackpotText.style.fontWeight = "900";
-  jackpotText.style.whiteSpace = "nowrap";   // 🔥 មិនឲ្យចុះបន្ទាត់
-  jackpotText.style.color = "#FFD700";
-  jackpotText.style.letterSpacing = "2px";
-  jackpotText.style.textShadow =
-    "0 0 15px red, 0 0 30px orange, 0 0 60px gold";
-  jackpotText.style.zIndex = "999999";
-  jackpotText.style.animation = "megaPulse 1s infinite alternate";
-  document.body.appendChild(jackpotText);
-
-  setTimeout(()=>{
-    jackpotText.remove();
-    overlay.remove();
-  },4000);
-
-  // 📳 Shake
-  document.body.classList.add("shake");
-  setTimeout(()=>{
-    document.body.classList.remove("shake");
-  },800);
 
   // 🔊 Sound
   const sound = document.getElementById("jackpotSound");
