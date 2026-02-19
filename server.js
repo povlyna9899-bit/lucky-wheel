@@ -281,7 +281,19 @@ app.get("/api/admin/user-history/:userId", verifyToken, async (req, res) => {
 
   res.json(spins);
 });
+/* ===================== ADMIN DELETE SINGLE SPIN ===================== */
+app.delete("/admin/clear-history/:id", verifyToken, async (req, res) => {
+  if (req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin Only" });
 
+  try {
+    await Spin.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.log(err);
+    res.json({ success: false });
+  }
+});
 /* ===================== PLAYER SPIN ===================== */
 app.post("/spin", verifyToken, async (req, res) => {
   if (req.user.role !== "player")
