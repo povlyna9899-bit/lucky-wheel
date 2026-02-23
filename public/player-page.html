@@ -29,7 +29,10 @@ body{
   z-index:-2;
   
 }
-
+#bgVideo{
+  left:0;
+  top:0;
+}
 /* dark overlay ដើម្បីអោយអក្សរច្បាស់ */
 body::before{
   content:"";
@@ -223,22 +226,30 @@ body::before{
   padding:25px;
   border-radius:70px;
   position:relative;
- background:linear-gradient(145deg,#8b0000,#3b0000);
+  background:linear-gradient(145deg,#8b0000,#3b0000);
   border:2px solid gold;
   box-shadow:0 0 30px rgba(255,215,0,0.4);
+
+  display:flex;                /* 🔥 */
+  justify-content:center;      /* 🔥 */
+  align-items:center;          /* 🔥 */
 }
 
 
 /* wrapper for pointer + canvas */
 #wheelWrapper{
   position:relative;
-  width:90vw;          /* 🔥 90% ទទឹងអេក្រង់ */
-  left:-3%;
-  max-width:500px;     /* កុំអោយធំពេកលើ PC */
+  width:95vw;
+  max-width:650px;
   aspect-ratio:1/1;
-  margin:auto;
+  margin:0 auto;   /* កណ្ដាល */
+  left:0;          /* លុប -3% */
 }
-
+@media (min-width:1000px){
+  #wheelWrapper{
+    max-width:750px;
+  }
+}
 .pointer{
   position:absolute;
   top:-1px;
@@ -306,13 +317,20 @@ button:hover{
 
 /* 🎬 AUTO SLIDER */
 .slider{
-  width:90%;
-  max-width:600px;
-  height:260px;
-  margin:60px auto;
+  width:95%;
+  max-width:1000px;   /* ធំលើ PC */
+  height:360px;       /* ធំជាងមុន */
+  margin:40px auto;
   overflow:hidden;
-  border-radius:20px;
+  border-radius:24px;
   box-shadow:0 0 35px rgb(0, 0, 0);
+}
+
+.slides img{
+  width:100%;
+  height:100%;
+  object-fit:cover;   /* ពេញស្លាយ */
+  background:#000;
 }
 
 .slides{
@@ -383,12 +401,12 @@ button:hover{
   box-shadow:0 0 15px #999;
 }
 @media (max-width:600px){
-  button{
-    width:85%;
-    font-size:20px;
-    padding:18px 0;
+  .slider{
+    height:260px;
+    max-width:95%;
   }
 }
+
 .social-buttons{
     margin-top:100px;
     display:flex;
@@ -491,14 +509,14 @@ if(!token){
     <div id="wheelContainer">
       <div id="wheelWrapper">
         <div class="pointer"></div>
-        <canvas id="wheelCanvas" width="420" height="420"></canvas>
+        <canvas id="wheelCanvas" width="650" height="650"></canvas>
       </div>
     </div>
      
     <button onclick="spinWheel()">🎡 SPIN</button>
-    <div id="result"></div>
-    
-  </div>
+    <div id="result">
+  <img id="resultImage" style="display:none; max-width:250px; margin-top:15px;">
+</div>
 
   <!-- history -->
   <div id="historySection" style="display:none;">
@@ -515,17 +533,17 @@ if(!token){
     </div>
   </div>
   <div class="social-buttons">
-   <a href="https://t.me/csbet22hour" class="social-btn telegram">
-      <i class="fab fa-telegram"></i> Telegram Support
-   </a>
+   <a href="https://t.me/csbet22hour" class="social-btn telegram" target="_blank" rel="noopener">
+  <i class="fab fa-telegram"></i> Telegram Support
+</a>
 
-   <a href="https://web.facebook.com/profile.php?id=61562163052595" class="social-btn facebook">
-      <i class="fab fa-facebook"></i> Facebook Page
-   </a>
+<a href="https://web.facebook.com/profile.php?id=61562163052595" class="social-btn facebook" target="_blank" rel="noopener">
+  <i class="fab fa-facebook"></i> Facebook Page
+</a>
 
-   <a href="https://t.me/v168khmer24" class="social-btn channel">
-      <i class="fab fa-telegram"></i> Telegram 
-   </a>
+<a href="https://t.me/v168khmer24" class="social-btn channel" target="_blank" rel="noopener">
+  <i class="fab fa-telegram"></i> Telegram
+</a>
 </div>
 </div>
 
@@ -609,13 +627,13 @@ const ctx = canvas.getContext("2d");
 /* 🔥 ដាក់ prizes លើគេបំផុត */
 const prizes = [
   { value: 0,  label: "ព្យាយាមម្ដងទៀត" },
-  { value: 5,  label: "ថែម10%" },
-  { value: 10, label: "អ្នកឈ្នះ5$" },
-  { value: 20, label: "20$" },
-  { value: 30, label: "30$" },
-  { value: 50, label: "អ្នកឈ្នះ50$" },
-  { value: 100,label: "100$" },
-  { value: 200,label: "I PHONE 15" }
+  { value: 5,  label: "អ្នកឈ្នះ1$" },
+  { value: 10, label: "អ្នកឈ្នះ10$" },
+  { value: 20, label: "អ្នកឈ្នះ:30$" },
+  { value: 30, label: "អ្នកឈ្នះ50$" },
+  { value: 50, label: "អ្នកឈ្នះ200$" },
+  { value: 100,label: "អ្នកឈ្នះSpeaker JBL" },
+  { value: 200,label: "I PHONE 17 Pro Max" }
 ];
 
 let currentRotation = 0;
@@ -828,41 +846,38 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 function createFirework(){
 
-  for(let burst = 0; burst < 5; burst++){
+  const particleCount = 25; // បន្ថយចំនួន
 
-    const centerX = Math.random() * window.innerWidth;
-    const centerY = Math.random() * window.innerHeight * 0.3;
+  const centerX = Math.random() * window.innerWidth;
+  const centerY = Math.random() * window.innerHeight * 0.4;
 
-    for(let i=0;i<50;i++){
+  for(let i=0;i<particleCount;i++){
 
-      const particle = document.createElement("div");
-      particle.className = "firework";
+    const particle = document.createElement("div");
+    particle.className = "firework";
 
-      const angle = Math.random() * 2 * Math.PI;
-      const distance = Math.random() * 200;
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = Math.random() * 120;
 
-      const dx = Math.cos(angle) * distance;
-      const dy = Math.sin(angle) * distance;
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance;
 
-      particle.style.left = centerX + "px";
-      particle.style.top = centerY + "px";
+    particle.style.left = centerX + "px";
+    particle.style.top = centerY + "px";
 
-    particle.style.background ="radial-gradient(circle, #fff, gold, orange, red)";
-      particle.style.boxShadow =
-        "0 0 15px #fff, 0 0 30px #ffd700, 0 0 60px #ff3300";
+    // លុប glow ធ្ងន់ៗចេញ
+    particle.style.background = "gold";
 
-      particle.animate([
-        { transform: "translate(0,0) scale(1)", opacity:1 },
-        { transform: `translate(${dx}px,${dy}px) scale(0.2)`, opacity:0 }
-      ],{
-        duration:900,
-        easing:"ease-out"
-      });
+    particle.animate([
+      { transform: "translate(0,0) scale(1)", opacity:1 },
+      { transform: `translate(${dx}px,${dy}px) scale(0.3)`, opacity:0 }
+    ],{
+      duration:700,
+      easing:"ease-out"
+    });
 
-      document.body.appendChild(particle);
-      setTimeout(()=> particle.remove(),900);
-      
-    }
+    document.body.appendChild(particle);
+    setTimeout(()=> particle.remove(),700);
   }
 }
 
