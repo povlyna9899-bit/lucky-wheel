@@ -223,33 +223,24 @@ body::before{
 #wheelContainer{
   width:fit-content;
   margin:40px auto;
-  padding:25px;
+  padding:45px;
   border-radius:70px;
   position:relative;
-  background:linear-gradient(145deg,#8b0000,#3b0000);
+ background:linear-gradient(145deg,#8b0000,#3b0000);
   border:2px solid gold;
   box-shadow:0 0 30px rgba(255,215,0,0.4);
-
-  display:flex;                /* 🔥 */
-  justify-content:center;      /* 🔥 */
-  align-items:center;          /* 🔥 */
 }
 
 
 /* wrapper for pointer + canvas */
 #wheelWrapper{
   position:relative;
-  width:95vw;
-  max-width:650px;
+  width:95vw;        /* ធំជាងមុន */
+  max-width:630px;   /* ធំលើ PC */
   aspect-ratio:1/1;
-  margin:0 auto;   /* កណ្ដាល */
-  left:0;          /* លុប -3% */
+  margin:auto;
 }
-@media (min-width:1000px){
-  #wheelWrapper{
-    max-width:750px;
-  }
-}
+
 .pointer{
   position:absolute;
   top:-1px;
@@ -257,9 +248,9 @@ body::before{
   transform:translateX(-50%) rotate(180deg);
   width:0;
   height:0;
-  border-left:18px solid transparent;
-  border-right:18px solid transparent;
-  border-bottom:25px solid red;
+  border-left:25px solid transparent;
+  border-right:25px solid transparent;
+  border-bottom:50px solid red;
   filter: drop-shadow(0 0 12px #ff0000);
   z-index: 9999;             /* 🔥 សំខាន់ */
 }
@@ -509,7 +500,7 @@ if(!token){
     <div id="wheelContainer">
       <div id="wheelWrapper">
         <div class="pointer"></div>
-        <canvas id="wheelCanvas" width="650" height="650"></canvas>
+        <canvas id="wheelCanvas" width="420" height="420"></canvas>
       </div>
     </div>
      
@@ -643,7 +634,7 @@ let spinning = false;
 function drawWheel(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const arc = 2*Math.PI/prizes.length;
-  ctx.font = "bold 18px Segoe UI";
+  ctx.font = "bold 16px Segoe UI";
   ctx.textAlign = "right";
 
   for(let i=0;i<prizes.length;i++){
