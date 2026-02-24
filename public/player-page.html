@@ -492,50 +492,52 @@ if(!token){
 <!-- CONTENT -->
 <div class="content">
 
-  <!-- game -->
+  <!-- GAME SECTION -->
   <div id="gameSection">
+
     <h2>Spin & Win</h2>
 
-    <!-- wheel -->
     <div id="wheelContainer">
       <div id="wheelWrapper">
         <div class="pointer"></div>
         <canvas id="wheelCanvas" width="420" height="420"></canvas>
       </div>
     </div>
-     
-    <button onclick="spinWheel()">🎡 SPIN</button>
-    <div id="result">
-  <img id="resultImage" style="display:none; max-width:250px; margin-top:15px;">
-</div>
 
-  <!-- history -->
+    <button id="spinBtn" onclick="spinWheel()">🎡 SPIN</button>
+
+    <div id="result"></div>
+
+    <!-- slider -->
+    <div class="slider">
+      <div class="slides">
+        <img src="img/poster1.jpg">
+        <img src="img/poster2.jpg">
+        <img src="img/poster3.jpg">
+      </div>
+    </div>
+
+    <!-- social -->
+    <div class="social-buttons">
+      <a href="https://t.me/csbet22hour" class="social-btn telegram" target="_blank">
+        Telegram Support
+      </a>
+      <a href="https://web.facebook.com/profile.php?id=61562163052595" class="social-btn facebook" target="_blank">
+        Facebook Page
+      </a>
+      <a href="https://t.me/v168khmer24" class="social-btn channel" target="_blank">
+        Telegram
+      </a>
+    </div>
+
+  </div>
+
+  <!-- HISTORY SECTION -->
   <div id="historySection" style="display:none;">
     <h2>My Spin History</h2>
     <div id="historyData">Loading...</div>
   </div>
 
-  <!-- slider -->
-  <div class="slider">
-    <div class="slides">
-      <img src="img/poster1.jpg" alt="Poster 1">
-      <img src="img/poster2.jpg" alt="Poster 2">
-      <img src="img/poster3.jpg" alt="Poster 3">
-    </div>
-  </div>
-  <div class="social-buttons">
-   <a href="https://t.me/csbet22hour" class="social-btn telegram" target="_blank" rel="noopener">
-  <i class="fab fa-telegram"></i> Telegram Support
-</a>
-
-<a href="https://web.facebook.com/profile.php?id=61562163052595" class="social-btn facebook" target="_blank" rel="noopener">
-  <i class="fab fa-facebook"></i> Facebook Page
-</a>
-
-<a href="https://t.me/v168khmer24" class="social-btn channel" target="_blank" rel="noopener">
-  <i class="fab fa-telegram"></i> Telegram
-</a>
-</div>
 </div>
 
 <!-- Music -->
@@ -545,7 +547,9 @@ if(!token){
 <audio id="casinoMusic" loop autoplay muted>
   <source src="/music.mp3" type="audio/mpeg">
 </audio>
-
+<audio id="spinSound" preload="auto" loop>
+  <source src="/spin.mp3" type="audio/mpeg">
+</audio>
 <button id="musicToggle" class="music-btn">
   🔊 MUSIC ON
 </button>
@@ -582,13 +586,13 @@ function logout(){
 }
 
 function showGame(){
-  document.getElementById("gameSection").style.display="block";
-  document.getElementById("historySection").style.display="none";
+  document.getElementById("gameSection").style.display = "block";
+  document.getElementById("historySection").style.display = "none";
 }
 
 function showHistory(){
-  document.getElementById("gameSection").style.display="none";
-  document.getElementById("historySection").style.display="block";
+  document.getElementById("gameSection").style.display = "none";
+  document.getElementById("historySection").style.display = "block";
   loadHistory();
 }
 function closeMenu(){
@@ -618,15 +622,15 @@ const ctx = canvas.getContext("2d");
 /* 🔥 ដាក់ prizes លើគេបំផុត */
 const prizes = [
   { value: 0,  label: "ព្យាយាមម្ដងទៀត" },
-  { value: 5,  label: "អ្នកឈ្នះ1$" },
+  { value: 5,  label: "អ្នកឈ្នះ5$" },
   { value: 10, label: "អ្នកឈ្នះ10$" },
-  { value: 20, label: "អ្នកឈ្នះ:30$" },
-  { value: 30, label: "អ្នកឈ្នះ50$" },
-  { value: 50, label: "អ្នកឈ្នះ200$" },
+  { value: 20, label: "អ្នកឈ្នះ20$" },
+  { value: 30, label: "អ្នកឈ្នះ30$" },
+  { value: 50, label: "Free 1 spin" },
   { value: 100,label: "អ្នកឈ្នះSpeaker JBL" },
   { value: 200,label: "I PHONE 17 Pro Max" }
 ];
-
+// 🎯 Jackpot values (ADD THIS)
 let currentRotation = 0;
 let spinning = false;
 
@@ -670,7 +674,32 @@ drawWheel();
 /* ------------------------------------ */
 
 async function spinWheel(){
+
   if(spinning) return;
+
+  const spinBtn = document.getElementById("spinBtn");
+  const topSpinsEl = document.getElementById("topSpins");
+
+  let currentSpins = parseInt(topSpinsEl.innerText);
+
+  if(currentSpins <= 0){
+    alert("No spins remaining");
+    return;
+  }
+
+  spinning = true;
+// 🎵 Start spin sound
+const spinSound = document.getElementById("spinSound");
+spinSound.currentTime = 0;
+spinSound.play().catch(()=>{});
+  // 🔒 Disable button
+  spinBtn.disabled = true;
+  spinBtn.innerText = "Spinning...";
+
+  // 🔥 Deduct immediately
+  currentSpins -= 1;
+  topSpinsEl.innerText = currentSpins;
+  checkSpinAnimation(currentSpins);
 
   const res = await fetch("/spin",{
     method:"POST",
@@ -679,89 +708,54 @@ async function spinWheel(){
 
   const data = await res.json();
 
-  console.log("Server prize:", data.prize, typeof data.prize); // debug
-
   if(!res.ok){
     alert(data.message);
+    spinning = false;
+    spinBtn.disabled = false;
+    spinBtn.innerText = "🎡 SPIN";
     return;
   }
 
-  spinning = true;
+  // 🎯 Find index
+  const prizesIndex = prizes.findIndex(p => p.value === data.prize);
+  const index = prizesIndex >= 0 ? prizesIndex : 0;
 
-  // កំណត់ index
-  let index = -1;
+  const sliceDeg = 360 / prizes.length;
+  const finalDeg = 360 - (index * sliceDeg) - sliceDeg / 2;
+  const totalRotation = 360 * 8 + finalDeg;
 
-  // ប្រសិនបើ prize ជា number
-  if(typeof data.prize === "number"){
-    index = prizes.findIndex(p => p.value === data.prize);
-  } else {
-    // ប្រសិនបើ prize ជា string
-    // អាចមាន "50$" ឬ​ ឬ "Try Again"
-    // ជាមួយ label ឬ value
-    index = prizes.findIndex(p => p.label === data.prize);
-    // បើត្រូវតែដក $ ឲ្យប្រៀបប្រដាប់
-    if(index < 0){
-      // try to parse number from string
-      const num = parseInt(data.prize.replace(/[^0-9]/g, ""));
-      if(!isNaN(num)){
-        index = prizes.findIndex(p => p.value === num);
-      }
+  canvas.style.transition = "none";
+  canvas.style.transform = "rotate(0deg)";
+  void canvas.offsetWidth;
+
+  canvas.style.transition = "transform 10s cubic-bezier(0.1, 0.7, 0.1, 1)";
+  canvas.style.transform = `rotate(${totalRotation}deg)`;
+  
+  setTimeout(()=>{
+  spinSound.pause();
+  spinSound.currentTime = 0;
+    const prizeLabel = prizes[index].label;
+
+    document.getElementById("result").innerText =
+      "🎉 " + prizeLabel +
+      " | Remaining Spins: " + data.spinsLeft;
+
+    // 🔄 Sync real spins from server
+    topSpinsEl.innerText = data.spinsLeft;
+    checkSpinAnimation(data.spinsLeft);
+
+    // 🎆 Jackpot effect
+    if([100,200].includes(data.prize)){
+      superJackpot();
     }
-  }
 
-  if(index < 0){
-    // fallback
-    index = 0;
-  }
+    loadHistory();
 
-const sliceDeg = 360 / prizes.length;
+    spinning = false;
+    spinBtn.disabled = false;
+    spinBtn.innerText = "🎡 SPIN";
 
-// គណនា degree ចុងក្រោយត្រឹមត្រូវ
-const finalDeg = 360 - (index * sliceDeg) - sliceDeg / 2;
-
-// បង្វិល 5 ជុំ ហើយបញ្ឈប់ត្រឹម slice
-const totalRotation = 360 * 5 + finalDeg;
-
-// RESET rotation មុន
-canvas.style.transition = "none";
-canvas.style.transform = "rotate(0deg)";
-
-// បង្ខំ browser reflow
-void canvas.offsetWidth;
-
-// បង្វិលថ្មី
-canvas.style.transition = "transform 6s cubic-bezier(.15,.85,.25,1)"
-canvas.style.transform = `rotate(${totalRotation}deg)`;
-
-
- setTimeout(()=>{
-
-  const prizeLabel = prizes[index].label;
-
-document.getElementById("result").innerText =
-  "🎉 " + prizeLabel +
-  " | Remaining Spins: " + data.spinsLeft;
-
-  document.getElementById("topSpins").innerText = data.spinsLeft;
-  checkSpinAnimation(data.spinsLeft);
-
-  let count = 0;
-const interval = setInterval(()=>{
-  createFirework();
-  count++;
-  if(count >= 5){
-    clearInterval(interval);
-  }
-},700);
-
-if(data.prize === 200){
-  superJackpot();
-}
-  spinning = false;
-
-},6000);
-
-
+  },10000);
 }
 
 /* ------------------------------------ */
@@ -783,7 +777,7 @@ async function loadHistory(){
   data.forEach(d=>{
     html += `
       <div style="padding:10px;border-bottom:1px solid #444;">
-        🎁 $${d.prize}<br>
+      🎁 ${d.prizeLabel || "$"+d.prize}<br>
         📅 ${new Date(d.createdAt).toLocaleString()}
       </div>
     `;

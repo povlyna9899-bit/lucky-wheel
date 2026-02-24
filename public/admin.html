@@ -248,10 +248,21 @@ async function loadProbability() {
     prizeList.forEach(p => {
       const weight = p.weight ?? p.percent ?? 0;
       total += weight;
+    const prizeLabels = {
+  0: "ព្យាយាមម្ដងទៀត",
+  5: "អ្នកឈ្នះ5$",
+  10: "អ្នកឈ្នះ10$",
+  20: "អ្នកឈ្នះ20$",
+  30: "អ្នកឈ្នះ30$",
+  50: "Free 1 Spin",
+  100: "Speaker JBL",
+  200: "I PHONE 17 Pro Max"
+};
 
+const displayName = prizeLabels[p.value] || p.value + "$";
       container.innerHTML += `
         <div style="margin-bottom:10px">
-          ${p.value}$ :
+          ${displayName} :
           <input 
             type="number"
             class="prob-input"
@@ -378,13 +389,21 @@ function renderHistory(data){
     return;
   }
 
-  data.forEach(item=>{
-  total+=item.prize;
-  box.innerHTML+=`
-    <div style="padding:8px;border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-      
+ data.forEach(item=>{
+  
+  let prizeDisplay;
+  
+  if(typeof item.prize === "number"){
+    total += item.prize;
+    prizeDisplay = "$" + item.prize;
+  } else {
+    prizeDisplay = item.prize;
+  }
+
+  box.innerHTML += `
+    <div style="padding:8px;border-bottom:1px solid #ddd; display:flex; justify-content:space-between;">
       <div>
-        🎁 $${item.prize} |
+        🎁 ${item.prizeLabel || "$"+item.prize}
         📅 ${new Date(item.createdAt).toLocaleString()}
       </div>
 
@@ -392,7 +411,6 @@ function renderHistory(data){
         onclick="clearHistory('${item._id}')">
         Clear
       </button>
-
     </div>
   `;
 });
