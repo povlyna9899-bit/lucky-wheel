@@ -31,14 +31,20 @@ const userSchema = new mongoose.Schema({
   password: String,
   role: { type: String, default: "player" },
   spinsLeft: { type: Number, default: 0 },
-  balance: { type: Number, default: 0 }
+  balance: { type: Number, default: 0 },
+
+  // 🔥 STREAK SYSTEM
+  streakCount: { type: Number, default: 0 },
+  lastSpinDate: { type: Date }
 });
 
 const spinSchema = new mongoose.Schema({
   userId: String,
   username: String,
   prize: Number,
+  prizeLabel: String,   // 🔥 បន្ថែមបន្ទាត់នេះ
   createdAt: { type: Date, default: Date.now }
+  
 });
 
 const User = mongoose.model("User", userSchema);
@@ -296,12 +302,21 @@ app.delete("/admin/clear-history/:id", verifyToken, async (req, res) => {
 });
 /* ===================== PLAYER SPIN ===================== */
 app.post("/spin", verifyToken, async (req, res) => {
+
+  console.log("🔥 /spin called");
+  console.log("User ID from token:", req.user.id);
+  console.log("Username:", req.user.username);
+
   if (req.user.role !== "player")
     return res.status(403).json({ message: "Player Only" });
 
   const user = await User.findById(req.user.id);
-  if (!user)
+  if (!user){
+    console.log("❌ User not found in DB");
     return res.status(404).json({ message: "User not found" });
+  }
+
+  console.log("Current spinsLeft:", user.spinsLeft);
 
   if (user.spinsLeft <= 0)
     return res.status(400).json({ message: "No spins remaining" });
@@ -309,10 +324,11 @@ app.post("/spin", verifyToken, async (req, res) => {
   // 🎯 Load probability
   let setting = await PrizeSetting.findOne();
 
-  if (!setting || !setting.values)
+  if (!setting || !setting.values){
+    console.log("❌ Prize settings not found");
     return res.status(500).json({ message: "Prize settings not found" });
+  }
 
-  // ✅ FIX MAP CONVERSION (សំខាន់បំផុត)
   const valuesObject =
     setting.values instanceof Map
       ? Object.fromEntries(setting.values)
@@ -322,6 +338,8 @@ app.post("/spin", verifyToken, async (req, res) => {
     value: Number(value),
     weight: Number(weight)
   }));
+
+  console.log("Prize config:", prizeConfig);
 
   // 🎯 Weighted random
   const totalWeight = prizeConfig.reduce((sum, p) => sum + p.weight, 0);
@@ -338,16 +356,42 @@ app.post("/spin", verifyToken, async (req, res) => {
     }
   }
 
+  console.log("🎯 Selected prize:", selectedPrize);
+
   // ✅ Update user
   user.spinsLeft -= 1;
   user.balance += selectedPrize;
+  // 🎁 50$ → +1 Free Spin
+let freeSpinReward = 0;
+
+if(selectedPrize === 50){
+  user.spinsLeft += 1;
+  freeSpinReward = 1;
+}
   await user.save();
 
-  await Spin.create({
-    userId: user._id,
-    username: user.username,
-    prize: selectedPrize
-  });
+  console.log("💰 New balance:", user.balance);
+  console.log("🎫 Spins left after spin:", user.spinsLeft);
+
+  const prizeLabels = {
+  0: "ព្យាយាមម្ដងទៀត",
+  5: "អ្នកឈ្នះ5$",
+  10: "អ្នកឈ្នះ10$",
+  20: "អ្នកឈ្នះ20$",
+  30: "អ្នកឈ្នះ30$",
+  50: "Free 1 spin",
+  100: "អ្នកឈ្នះSpeaker JBL",
+  200: "I PHONE 17 Pro Max"
+};
+
+await Spin.create({
+  userId: user._id,
+  username: user.username,
+  prize: selectedPrize,
+  prizeLabel: prizeLabels[selectedPrize] || selectedPrize
+});
+
+  console.log("💾 Spin saved to database!");
 
   res.json({
     prize: selectedPrize,
@@ -355,6 +399,7 @@ app.post("/spin", verifyToken, async (req, res) => {
     balance: user.balance
   });
 });
+
 /* ===================== ADMIN SEE ALL SPINS ===================== */
 app.get("/api/spins", verifyToken, async (req, res) => {
   if (req.user.role !== "admin")
