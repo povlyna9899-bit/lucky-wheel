@@ -55,14 +55,7 @@ body::before{
   to{ opacity:0; }
 }
 
-/* ===== SCREEN SHAKE ===== */
-@keyframes shake{
-  0%{ transform:translate(0,0); }
-  25%{ transform:translate(5px,-5px); }
-  50%{ transform:translate(-5px,5px); }
-  75%{ transform:translate(5px,5px); }
-  100%{ transform:translate(0,0); }
-}
+
 
 .shake{
   animation:shake 0.1s;
@@ -309,32 +302,28 @@ button:hover{
 /* 🎬 AUTO SLIDER */
 .slider{
   width:95%;
-  max-width:1000px;   /* ធំលើ PC */
-  height:360px;       /* ធំជាងមុន */
+  max-width:1000px;
+  height:360px;                 /* ✅ poster height */
   margin:40px auto;
   overflow:hidden;
   border-radius:24px;
-  box-shadow:0 0 35px rgb(0, 0, 0);
-}
-
-.slides img{
-  width:100%;
-  height:100%;
-  object-fit:cover;   /* ពេញស្លាយ */
+  box-shadow:0 0 35px rgb(0,0,0);
   background:#000;
 }
 
 .slides{
   display:flex;
-  width:300%;
-  animation: slide 20s infinite;
+  height:100%;
+  width:100%;                   /* ✅ JS will move by translateX */
+  transition: transform 0.6s ease-in-out;
 }
 
 .slides img{
+  flex:0 0 100%;                /* ✅ 1 image = 100% width */
   width:100%;
-  height:260px;
-  object-fit:contain;
-  background:#000;
+  height:100%;                  /* ✅ fill 360px */
+  object-fit:cover;             /* ✅ full (crop little) */
+  display:block;
 }
 
 @keyframes slide{
@@ -466,7 +455,7 @@ if(!token){
 
   <!-- CENTER LOGO -->
   <div class="nav-center">
-    🧧 <span>Lucky wheel SB24 Chines New Year</span>
+   🎡 <span>Spin & Win Event</span>
   </div>
 
   <!-- RIGHT USER AREA -->
@@ -886,6 +875,18 @@ function superJackpot(){
 }
 
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  let currentSlide = 0;
+  const slides = document.querySelector(".slides");
+  const imgs = document.querySelectorAll(".slides img");
+  const total = imgs.length;
 
+  setInterval(() => {
+    currentSlide = (currentSlide + 1) % total;
+    slides.style.transform = `translateX(-${currentSlide * 100}%)`;
+  }, 4000);
+});
+</script>
 </body>
 </html>
