@@ -125,7 +125,13 @@ th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
 
 <div class="card">
   <h3>Create Player</h3>
-  <input type="text" id="username" placeholder="Username">
+  <div style="display:flex;gap:5px;margin-bottom:10px">
+  <span style="padding:8px;background:#e2e8f0;border-radius:6px">
+    CBPAABCA
+  </span>
+
+  <input type="number" id="userNumber" placeholder="000">
+</div>
   <input type="password" id="password" placeholder="Password">
   <button class="btn primary" onclick="createPlayer()">Create</button>
 </div>
@@ -184,10 +190,21 @@ if(!token) window.location.href="/admin-login.html";
 let playersData = [];
 let editingId = "";
 let currentHistory = [];
-
+let probabilityUnlocked = false;
 /* CREATE PLAYER */
 async function createPlayer(){
-  const username = document.getElementById("username").value;
+
+  const prefix = "CBPAABCA";
+
+  const number = document.getElementById("userNumber").value;
+
+  if(!number){
+    alert("Enter player number");
+    return;
+  }
+
+  const username = prefix + number.padStart(3,"0");
+
   const password = document.getElementById("password").value;
 
   const res = await fetch("/create-player",{
@@ -200,7 +217,12 @@ async function createPlayer(){
   });
 
   const data = await res.json();
-  if(data.success) loadPlayers();
+
+  if(data.success){
+    loadPlayers();
+    document.getElementById("userNumber").value="";
+    document.getElementById("password").value="";
+  }
   else alert(data.message);
 }
 
@@ -250,10 +272,10 @@ async function loadProbability() {
       total += weight;
     const prizeLabels = {
   0: "ព្យាយាមម្ដងទៀត",
-  5: "អ្នកឈ្នះ5$",
+  5: "អ្នកឈ្នះ1$",
   10: "អ្នកឈ្នះ10$",
-  20: "អ្នកឈ្នះ20$",
-  30: "អ្នកឈ្នះ30$",
+  20: "អាវ​ SBC369",
+  30: "ម៉ូតូ​ scoopy 2025",
   50: "Free 1 Spin",
   100: "Speaker JBL",
   200: "I PHONE 17 Pro Max"
@@ -345,6 +367,16 @@ function filterPlayers(){
 
 /* RENDER TABLE */
 function renderTable(data){
+
+  const prefix = "CBPAABCA";
+
+  // 🔥 Sort username by number
+  data.sort((a,b)=>{
+    const numA = parseInt(a.username.replace(prefix,""));
+    const numB = parseInt(b.username.replace(prefix,""));
+    return numA - numB;
+  });
+
   const table=document.getElementById("playerTable");
   table.innerHTML="";
   document.getElementById("totalCount").innerText=data.length;
@@ -558,14 +590,28 @@ function logout(){
 
 loadPlayers();
 loadProbability();   // បន្ថែមបន្ទាត់នេះ
-function toggleWinning() {
+function toggleWinning(){
+
+  if(!probabilityUnlocked){
+
+    const pass = prompt("Enter Admin 2FA Password");
+
+    if(pass !== "778899"){
+      alert("Wrong Password");
+      return;
+    }
+
+    probabilityUnlocked = true; // unlock
+  }
+
   const panel = document.getElementById("winningPanel");
 
-  if (panel.style.display === "none") {
+  if(panel.style.display === "none"){
     panel.style.display = "block";
-  } else {
+  }else{
     panel.style.display = "none";
   }
+
 }
 
 </script>

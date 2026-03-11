@@ -148,17 +148,65 @@ body::before{
 }
 
 /* SPIN BOX */
+/* SPIN BUTTON */
 .spin-box{
   background:linear-gradient(45deg,#ffd700,#ff9900);
-  padding:12px 25px;
+  padding:14px 35px;
   border-radius:50px;
+
   font-size:18px;
   font-weight:bold;
-  color:black;
+  color:#000;
 
-  box-shadow:0 0 20px rgba(255,215,0,0.7);
+  cursor:pointer;
+
+  box-shadow:
+    0 0 10px #ffd700,
+    0 0 20px #ff9900,
+    0 0 40px rgba(255,153,0,0.7);
+
+  transition:0.2s;
 
   animation:pulse 1.5s infinite;
+}
+
+/* hover effect */
+.spin-box:hover{
+  transform:scale(1.08);
+  box-shadow:
+    0 0 20px #ffd700,
+    0 0 40px #ff9900,
+    0 0 70px rgba(255,153,0,0.9);
+}
+
+/* click effect */
+.spin-box:active{
+  transform:scale(0.95);
+}
+
+/* when spinning */
+.spin-box.stop{
+  animation:none;
+  opacity:0.6;
+  transform:scale(1);
+  box-shadow:0 0 10px rgba(255,215,0,0.3);
+  cursor:not-allowed;
+}
+
+/* pulse animation */
+@keyframes pulse{
+  0%{
+    transform:scale(1);
+    box-shadow:0 0 10px #ffd700;
+  }
+  50%{
+    transform:scale(1.08);
+    box-shadow:0 0 35px #ff9900;
+  }
+  100%{
+    transform:scale(1);
+    box-shadow:0 0 10px #ffd700;
+  }
 }
 .spin-box.stop{
   animation:none;
@@ -332,25 +380,7 @@ button:hover{
   66%  { transform:translateX(-200%); }
   100% { transform:translateX(0); }
 }
-@keyframes pulse{
-  0%{
-    transform:scale(1);
-    box-shadow:0 0 10px rgba(255,215,0,0.6);
-  }
-  50%{
-    transform:scale(1.15);
-    box-shadow:0 0 30px rgba(255,215,0,1);
-  }
-  100%{
-    transform:scale(1);
-    box-shadow:0 0 10px rgba(255,215,0,0.6);
-  }
-}
-@keyframes fadeOut{
-  0%{ opacity:1; }
-  80%{ opacity:1; }
-  100%{ opacity:0; }
-}
+
 
 /* MUSIC BUTTON */
 .music-btn{
@@ -611,10 +641,10 @@ const ctx = canvas.getContext("2d");
 /* 🔥 ដាក់ prizes លើគេបំផុត */
 const prizes = [
   { value: 0,  label: "ព្យាយាមម្ដងទៀត" },
-  { value: 5,  label: "អ្នកឈ្នះ5$" },
+  { value: 5,  label: "អ្នកឈ្នះ1$" },
   { value: 10, label: "អ្នកឈ្នះ10$" },
-  { value: 20, label: "អ្នកឈ្នះ20$" },
-  { value: 30, label: "អ្នកឈ្នះ30$" },
+  { value: 20, label: "អាវ​ SBC369" },
+  { value: 30, label: "ម៉ូតូ​ scoopy 2025" },
   { value: 50, label: "Free 1 spin" },
   { value: 100,label: "អ្នកឈ្នះSpeaker JBL" },
   { value: 200,label: "I PHONE 17 Pro Max" }

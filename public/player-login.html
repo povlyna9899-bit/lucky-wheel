@@ -144,7 +144,8 @@ button:active{
 <div class="box">
   <h2>🎰 Ultra Casino Login</h2>
 
-  <input type="text" id="username" placeholder="Username">
+  <input type="text" id="username" placeholder="Username"
+oninput="this.value=this.value.toUpperCase()">
 
   <div class="password-box">
     <input type="password" id="password" placeholder="Password">
@@ -208,8 +209,10 @@ if(token){
 
 /* Login */
 async function login(){
-  const username=document.getElementById("username").value;
+
+  const username=document.getElementById("username").value.trim().toUpperCase();
   const password=document.getElementById("password").value;
+
   const error=document.getElementById("error");
   const loading=document.getElementById("loading");
 
@@ -217,6 +220,7 @@ async function login(){
   loading.innerText="Checking...";
 
   try{
+
     const res=await fetch("/player/login",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -231,6 +235,7 @@ async function login(){
     }else{
       error.innerText="❌ Invalid Login";
     }
+
   }catch{
     error.innerText="⚠️ Server Error";
   }
