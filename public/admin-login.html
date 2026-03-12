@@ -10,6 +10,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 </head>
+
 <body>
 
 <div class="background"></div>
@@ -43,63 +44,111 @@
       </label>
     </div>
 
-    <button id="loginBtn" onclick="loginAdmin()">
+    <button id="loginBtn">
       <span id="btnText">Secure Login</span>
-      <span class="spinner" id="spinner"></span>
+      <span class="spinner" id="spinner" style="display:none"></span>
     </button>
 
     <p id="error" class="error"></p>
 
   </div>
+
 </div>
 
 <script>
 
+/* Toggle password */
 function togglePassword() {
+
   const pass = document.getElementById("password");
+
   pass.type = pass.type === "password" ? "text" : "password";
+
 }
 
-async function loginAdmin() {
+/* Press Enter Login */
+document.addEventListener("keypress", function(e){
+
+  if(e.key === "Enter"){
+    loginAdmin();
+  }
+
+});
+
+/* Check existing login */
+const token = localStorage.getItem("adminToken");
+
+if(token){
+  window.location.href="/admin";
+}
+
+/* Login function */
+async function loginAdmin(){
 
   const btn = document.getElementById("loginBtn");
   const spinner = document.getElementById("spinner");
   const text = document.getElementById("btnText");
+  const error = document.getElementById("error");
   const card = document.getElementById("loginCard");
 
-  spinner.style.display = "inline-block";
-  text.style.display = "none";
-  btn.disabled = true;
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-  const remember = document.getElementById("remember").checked;
+  if(!username || !password){
 
-  const res = await fetch("/admin-login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
-  });
+    error.innerText="Please enter username and password";
+    return;
 
-  const data = await res.json();
-
-  spinner.style.display = "none";
-  text.style.display = "inline";
-  btn.disabled = false;
-
-  if (data.success) {
-    if (remember) {
-      localStorage.setItem("adminToken", data.token);
-    } else {
-      sessionStorage.setItem("adminToken", data.token);
-    }
-    window.location.href = "/admin";
-  } else {
-    card.classList.add("shake");
-    setTimeout(()=> card.classList.remove("shake"), 500);
-    document.getElementById("error").innerText = data.message || "Login Failed";
   }
+
+  spinner.style.display="inline-block";
+  text.style.display="none";
+  btn.disabled=true;
+  error.innerText="";
+
+  try{
+
+    const res = await fetch("/admin-login",{
+
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({username,password})
+
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+
+      localStorage.setItem("adminToken",data.token);
+      localStorage.setItem("adminRole",data.role);
+      localStorage.setItem("adminPrefix",data.prefix);
+
+      window.location.href="/admin";
+
+    }else{
+
+      card.classList.add("shake");
+      setTimeout(()=>card.classList.remove("shake"),500);
+
+      error.innerText = data.message || "Invalid login";
+
+    }
+
+  }catch(err){
+
+    error.innerText="Server error";
+
+  }
+
+  spinner.style.display="none";
+  text.style.display="inline";
+  btn.disabled=false;
+
 }
+
+/* Button click */
+document.getElementById("loginBtn").addEventListener("click",loginAdmin);
 
 </script>
 

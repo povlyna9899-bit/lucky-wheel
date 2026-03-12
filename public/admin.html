@@ -9,7 +9,37 @@
 body{background:#f1f5f9;transition:.3s;}
 .dark{background:#0f172a;color:white;}
 .layout{display:flex;min-height:100vh}
+.admin-info{
+  display:flex;
+  gap:15px;
+  margin-bottom:15px;
+}
+select{
+  width:55px;
+  padding:6px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  text-align:center;
+}
+.admin-box{
+  background:#f1f5f9;
+  padding:10px 15px;
+  border-radius:8px;
+  font-size:14px;
+  font-weight:600;
+  color:#1e293b;
+}
 
+.dark .admin-box{
+  background:#334155;
+  color:white;
+}
+
+.admin-box span{
+  margin-left:6px;
+  color:#2563eb;
+  font-weight:bold;
+}
 /* Sidebar */
 .sidebar{
   width:240px;
@@ -61,9 +91,30 @@ input{
 .edit{background:#f59e0b;color:white}
 .history{background:#16a34a;color:white}
 
-table{width:100%;border-collapse:collapse;}
-th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
-.dark th,.dark td{border-color:#334155;}
+table{
+  width:100%;
+  border-collapse: collapse;
+  background:#fff;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+th{
+  background:#111827;
+  color:#fff;
+  padding:12px;
+  font-weight:600;
+}
+
+td{
+  padding:10px;
+  border-bottom:1px solid #eee;
+}
+
+tr:hover{
+  background:#f9fafb;
+}
 
 .modal{
   position:fixed;
@@ -90,7 +141,10 @@ th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
 
 <div class="sidebar">
   <h2>Admin Panel</h2>
-
+<button id="createAdminBtn" onclick="openAdminPanel()" 
+style="background:#8b5cf6;color:white;border:none;padding:10px;width:100%;border-radius:6px;margin-bottom:10px;">
+👑 Create Admin
+</button>
   <button onclick="toggleWinning()" 
     style="background:#f39c12;color:white;border:none;padding:10px;width:100%;border-radius:6px;margin-bottom:10px;">
     🎯 Winning Probability
@@ -124,16 +178,42 @@ th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
 <p>Total Players: <b id="totalCount">0</b></p>
 
 <div class="card">
-  <h3>Create Player</h3>
-  <div style="display:flex;gap:5px;margin-bottom:10px">
-  <span style="padding:8px;background:#e2e8f0;border-radius:6px">
-    CBPAABCA
-  </span>
+<h3>Create Player</h3>
 
-  <input type="number" id="userNumber" placeholder="000">
+<div style="margin-bottom:10px">
+
+<div class="admin-info">
+
+  <div class="admin-box">
+    👤 Admin
+    <span id="adminName"></span>
+  </div>
+
+  <div class="admin-box">
+    🔑 Prefix
+    <span id="prefixDisplay"></span>
+  </div>
+
 </div>
-  <input type="password" id="password" placeholder="Password">
-  <button class="btn primary" onclick="createPlayer()">Create</button>
+
+</div>
+
+<!-- SUPERADMIN INPUT -->
+<input type="text" id="playerText" placeholder="Enter Username" style="display:none">
+
+<!-- ADMIN NUMBER SELECT -->
+<div id="numberSelect" style="display:flex; gap:5px; margin-bottom:10px">
+
+<select id="num1"></select>
+<select id="num2"></select>
+<select id="num3"></select>
+
+</div>
+
+<input type="password" id="password" placeholder="Password">
+
+<button class="btn primary" onclick="createPlayer()">Create</button>
+
 </div>
 
 <div class="card">
@@ -152,7 +232,23 @@ th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
     <tbody id="playerTable"></tbody>
   </table>
 </div>
+<div class="card" id="adminListCard">
+<h3>Admin List</h3>
 
+<table>
+<thead>
+<tr>
+<th>Username</th>
+<th>Prefix</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody id="adminTable"></tbody>
+
+</table>
+
+</div>
 <div class="card">
   <h3>User Spin History</h3>
 
@@ -181,53 +277,217 @@ th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
     <button class="btn primary" onclick="updatePlayer()">Save</button>
   </div>
 </div>
+<!-- Create Admin Modal -->
+<div class="modal" id="adminModal">
+  <div class="modal-content">
+
+    <h3>Create Admin</h3>
+
+    <input type="text" id="adminUsername" placeholder="Admin Username">
+
+    <input type="password" id="adminPassword" placeholder="Admin Password">
+
+    <input type="text" id="adminPrefix" placeholder="Prefix Example: CBPAABCC">
+
+    <button class="btn primary" onclick="createAdmin()">
+      Create Admin
+    </button>
+
+  </div>
+</div>
 
 <script>
-
-const token = localStorage.getItem("adminToken");
-if(!token) window.location.href="/admin-login.html";
-
 let playersData = [];
 let editingId = "";
 let currentHistory = [];
 let probabilityUnlocked = false;
-/* CREATE PLAYER */
-async function createPlayer(){
 
-  const prefix = "CBPAABCA";
+ /* LOAD ADMINS */
+async function loadAdmins(){
 
-  const number = document.getElementById("userNumber").value;
+  const res = await fetch("/admins",{
+    headers:{
+      "Authorization":"Bearer "+token
+    }
+  });
 
-  if(!number){
-    alert("Enter player number");
+  if(!res.ok) return;
+
+  const admins = await res.json();
+
+  const table = document.getElementById("adminTable");
+
+  if(!table) return;
+
+  table.innerHTML="";
+
+  admins.forEach(a=>{
+
+    const row=document.createElement("tr");
+
+    row.innerHTML=`
+      <td>${a.username}</td>
+      <td>${a.prefix || "-"}</td>
+      <td>
+
+<button class="btn edit"
+onclick="editAdmin('${a._id}')">
+Edit
+</button>
+
+<button class="btn danger"
+onclick="deleteAdmin('${a._id}')">
+Delete
+</button>
+
+</td>
+    `;
+
+    table.appendChild(row);
+
+  });
+
+}
+
+/* DELETE ADMIN */
+async function deleteAdmin(id){
+
+  if(!confirm("Delete this admin?")) return;
+
+  await fetch("/delete-admin/"+id,{
+    method:"DELETE",
+    headers:{
+      "Authorization":"Bearer "+token
+    }
+  });
+
+  loadAdmins();
+
+}
+function openAdminPanel(){
+  document.getElementById("adminModal").style.display="flex";
+}
+
+async function createAdmin(){
+
+  const username = document.getElementById("adminUsername").value;
+  const password = document.getElementById("adminPassword").value;
+  const prefix = document.getElementById("adminPrefix").value;
+
+  if(!username || !password || !prefix){
+    alert("Please fill all fields");
     return;
   }
 
-  const username = prefix + number.padStart(3,"0");
-
-  const password = document.getElementById("password").value;
-
-  const res = await fetch("/create-player",{
+  const res = await fetch("/create-admin",{
     method:"POST",
     headers:{
       "Content-Type":"application/json",
       "Authorization":"Bearer "+token
     },
-    body:JSON.stringify({username,password})
+    body:JSON.stringify({
+      username,
+      password,
+      prefix
+    })
   });
 
   const data = await res.json();
 
-  if(data.success){
-    loadPlayers();
-    document.getElementById("userNumber").value="";
-    document.getElementById("password").value="";
-  }
-  else alert(data.message);
+if(data.success){
+
+  alert("Admin created successfully");
+
+  document.getElementById("adminModal").style.display="none";
+
+  loadAdmins();
+
+}else{
+  alert(data.message || "Error creating admin");
 }
+
+}
+const token =
+  localStorage.getItem("adminToken") ||
+  sessionStorage.getItem("adminToken");
+
+if(!token){
+  window.location.href="/admin-login.html";
+}
+
+const role = localStorage.getItem("adminRole");
+
+function getAdminData(){
+  try{
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload;
+  }catch{
+    return {};
+  }
+}
+/* ================= edit admin ================= */
+async function editAdmin(id){
+
+const password = prompt("Enter new admin password");
+
+if(!password) return;
+
+const res = await fetch("/edit-admin/"+id,{
+method:"PUT",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+token
+},
+body:JSON.stringify({password})
+});
+
+const data = await res.json();
+
+if(data.success){
+alert("Password updated");
+}else{
+alert("Error updating password");
+}
+
+}
+/* ================= LOAD PAGE ================= */
+window.onload = function(){
+
+  const data = getAdminData();
+
+  document.getElementById("adminName").innerText = data.username || "-";
+  document.getElementById("prefixDisplay").innerText = data.prefix || "-";
+
+  loadDigits();
+
+  // ⭐ ROLE CONTROL
+  if(role === "superadmin"){
+
+    document.getElementById("numberSelect").style.display="none";
+    document.getElementById("playerText").style.display="block";
+
+  }else{
+
+    document.getElementById("numberSelect").style.display="flex";
+
+  }
+
+  if(role !== "superadmin"){
+
+    const btn = document.getElementById("createAdminBtn");
+    if(btn) btn.style.display="none";
+
+    const adminCard = document.getElementById("adminListCard");
+    if(adminCard) adminCard.style.display="none";
+
+  }
+
+}
+
 
 /* LOAD PLAYERS */
 async function loadPlayers(){
+
   const res = await fetch("/players",{
     headers:{ "Authorization":"Bearer "+token }
   });
@@ -239,72 +499,80 @@ async function loadPlayers(){
   }
 
   const data = await res.json();
-  playersData = data;
-  renderTable(data);
+
+  // ⭐ SORT PLAYER BY NUMBER
+  playersData = data.sort((a,b)=>{
+
+    const numA = parseInt(a.username.match(/\d+$/));
+    const numB = parseInt(b.username.match(/\d+$/));
+
+    return numA - numB;
+
+  });
+
+  renderTable(playersData);
+
 }
 /* ================= PROBABILITY SYSTEM ================= */
 
-async function loadProbability() {
-  try {
-    const res = await fetch("/api/admin/prize-settings", {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
+async function loadProbability(){
 
-    const result = await res.json();
-    console.log("API Result:", result);
-
-    const prizeList = result.prizes || result.data || result;
-
-    if (!Array.isArray(prizeList)) {
-      console.log("Prize list not array");
-      return;
+  const res = await fetch("/api/admin/prize-settings",{
+    headers:{
+      "Authorization":"Bearer "+token
     }
+  });
 
-    const container = document.getElementById("probabilityContainer");
-    container.innerHTML = "";
+  if(!res.ok){
+    console.log("API error");
+    return;
+  }
 
-    let total = 0;
+  const prizes = await res.json();
 
-    prizeList.forEach(p => {
-      const weight = p.weight ?? p.percent ?? 0;
-      total += weight;
-    const prizeLabels = {
+  const container = document.getElementById("probabilityContainer");
+  container.innerHTML="";
+
+  let total=0;
+
+  prizes.forEach(p=>{
+
+    total += p.weight;
+const prizeLabels = {
   0: "ព្យាយាមម្ដងទៀត",
   5: "អ្នកឈ្នះ1$",
   10: "អ្នកឈ្នះ10$",
-  20: "អាវ​ SBC369",
-  30: "ម៉ូតូ​ scoopy 2025",
+  20: "អាវ SBC369",
+  30: "ម៉ូតូ Scoopy 2025",
   50: "Free 1 Spin",
   100: "Speaker JBL",
   200: "I PHONE 17 Pro Max"
 };
+    container.innerHTML += `
+      <div style="margin-bottom:10px;color:white">
 
-const displayName = prizeLabels[p.value] || p.value + "$";
-      container.innerHTML += `
-        <div style="margin-bottom:10px">
-          ${displayName} :
-          <input 
-            type="number"
-            class="prob-input"
-            data-value="${p.value}"
-            value="${weight}"
-            onchange="calculateTotal()">
-        </div>
-      `;
-    });
+        ${prizeLabels[p.value] || p.value+"$"} :
 
-    document.getElementById("totalPercent").innerText = total;
-    calculateTotal();
+        <input
+          type="number"
+          class="prob-input"
+          data-value="${p.value}"
+          value="${p.weight}"
+          onchange="calculateTotal()"
+        >
 
-  } catch (err) {
-    console.log("Load error:", err);
-  }
+      </div>
+    `;
+
+  });
+
+  document.getElementById("totalPercent").innerText = total;
+
 }
-
 function calculateTotal(){
+
   const inputs = document.querySelectorAll(".prob-input");
+
   let total = 0;
 
   inputs.forEach(i=>{
@@ -312,15 +580,17 @@ function calculateTotal(){
   });
 
   const totalEl = document.getElementById("totalPercent");
+
   totalEl.innerText = total;
 
-  if(total !== 100){
-    totalEl.style.color = "red";
+  if(total === 100){
+    totalEl.style.color = "lime";
   }else{
-    totalEl.style.color = "green";
+    totalEl.style.color = "red";
   }
-}
 
+}
+/* ================= SAVE PROBABILITY ================= */
 async function saveProbability() {
   const inputs = document.querySelectorAll(".prob-input");
 
@@ -340,7 +610,7 @@ async function saveProbability() {
     return;
   }
 
-  const res = await fetch("/api/admin/prize-settings", {
+  const res = await fetch("/api/admin/prize-settings",{
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -357,36 +627,107 @@ async function saveProbability() {
 }
 
 /* SEARCH */
+
 function filterPlayers(){
-  const keyword=document.getElementById("search").value.toLowerCase();
-  const filtered=playersData.filter(p=>
+
+  const keyword = document.getElementById("search").value.toLowerCase();
+
+  const filtered = playersData.filter(p =>
     p.username.toLowerCase().includes(keyword)
   );
-  renderTable(filtered);
-}
 
+  renderTable(filtered);
+
+}
+async function viewHistory(userId){
+
+  const res = await fetch("/api/admin/user-history/"+userId,{
+    headers:{
+      "Authorization":"Bearer "+token
+    }
+  });
+
+  const data = await res.json();
+
+  currentHistory = data;
+
+  renderHistory(data);
+
+}
+/* ================= CREATE PLAYER ================= */
+
+async function createPlayer(){
+
+  const prefix = getAdminData().prefix || "";
+  const password = document.getElementById("password").value;
+
+  let username = "";
+
+  // ⭐ SUPERADMIN
+  if(role === "superadmin"){
+
+    username = document.getElementById("playerText").value.trim();
+
+  }
+  // ⭐ NORMAL ADMIN
+  else{
+
+    const n1 = document.getElementById("num1").value;
+    const n2 = document.getElementById("num2").value;
+    const n3 = document.getElementById("num3").value;
+
+    const number = n1 + n2 + n3;
+
+    username = prefix + number;
+
+  }
+
+  if(!username || !password){
+    alert("Please fill all fields");
+    return;
+  }
+
+  await fetch("/create-player",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+token
+    },
+    body:JSON.stringify({
+      username,
+      password
+    })
+  });
+
+  loadPlayers();
+
+}
 /* RENDER TABLE */
 function renderTable(data){
 
-  const prefix = "CBPAABCA";
-
-  // 🔥 Sort username by number
+  // ✅ SORT USERNAME BY NUMBER
   data.sort((a,b)=>{
-    const numA = parseInt(a.username.replace(prefix,""));
-    const numB = parseInt(b.username.replace(prefix,""));
+
+    const numA = parseInt(a.username.match(/\d+$/));
+    const numB = parseInt(b.username.match(/\d+$/));
+
     return numA - numB;
+
   });
 
-  const table=document.getElementById("playerTable");
+  const table = document.getElementById("playerTable");
   table.innerHTML="";
-  document.getElementById("totalCount").innerText=data.length;
+
+  document.getElementById("totalCount").innerText = data.length;
 
   data.forEach(p=>{
-    const row=document.createElement("tr");
-    row.innerHTML=`
+
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
       <td>${p.username}</td>
-      <td>${p.spinsLeft ?? 0}</td>
-      <td>$${p.balance ?? 0}</td>
+      <td>${p.spinsLeft || 0}</td>
+      <td>$${p.balance || 0}</td>
       <td>
         <button class="btn history" onclick="viewHistory('${p._id}')">History</button>
         <button class="btn edit" onclick="openEdit('${p._id}','${p.username}')">Edit</button>
@@ -394,20 +735,13 @@ function renderTable(data){
         <button class="btn primary" onclick="setSpin('${p._id}')">Set Spin</button>
       </td>
     `;
+
     table.appendChild(row);
-  });
-}
 
-/* VIEW HISTORY */
-async function viewHistory(userId){
-  const res = await fetch("/api/admin/user-history/"+userId,{
-    headers:{ "Authorization":"Bearer "+token }
   });
 
-  const data = await res.json();
-  currentHistory = data;
-  renderHistory(data);
 }
+
 
 /* RENDER HISTORY */
 function renderHistory(data){
@@ -529,13 +863,18 @@ function filterMonth(){
 
 /* DELETE */
 async function deletePlayer(id){
+
   if(!confirm("Delete this player?")) return;
+
   await fetch("/delete/"+id,{
     method:"DELETE",
     headers:{ "Authorization":"Bearer "+token }
   });
+
   loadPlayers();
+
 }
+
 
 /* EDIT */
 function openEdit(id,username){
@@ -564,7 +903,9 @@ async function updatePlayer(){
 
 /* SET SPIN */
 function setSpin(id){
-  const spins=prompt("Enter spin amount:");
+
+  const spins = prompt("Enter spin amount:");
+
   if(!spins) return;
 
   fetch("/set-spin/"+id,{
@@ -574,7 +915,8 @@ function setSpin(id){
       "Authorization":"Bearer "+token
     },
     body:JSON.stringify({spins:Number(spins)})
-  }).then(()=>loadPlayers());
+  }).then(loadPlayers);
+
 }
 
 /* DARK MODE */
@@ -585,6 +927,7 @@ function toggleDark(){
 /* LOGOUT */
 function logout(){
   localStorage.removeItem("adminToken");
+  sessionStorage.removeItem("adminToken");
   window.location.href="/admin-login.html";
 }
 
@@ -596,7 +939,7 @@ function toggleWinning(){
 
     const pass = prompt("Enter Admin 2FA Password");
 
-    if(pass !== "778899"){
+    if(pass !== "210320"){
       alert("Wrong Password");
       return;
     }
@@ -613,7 +956,33 @@ function toggleWinning(){
   }
 
 }
+loadAdmins();
+function loadDigits(){
 
+  const selects = ["num1","num2","num3"];
+
+  selects.forEach(id=>{
+
+    const select = document.getElementById(id);
+
+    if(!select) return;
+
+    select.innerHTML="";
+
+    for(let i=0;i<=9;i++){
+
+      const option = document.createElement("option");
+
+      option.value = i;
+      option.textContent = i;
+
+      select.appendChild(option);
+
+    }
+
+  });
+
+}
 </script>
 
 </body>
