@@ -11,7 +11,13 @@ const app = express();
 /* ===================== CONNECT MONGODB ===================== */
 
 mongoose.connect(process.env.MONGO_URI)
-.then(()=>console.log("✅ MongoDB Connected"))
+.then(async()=>{
+
+ console.log("✅ MongoDB Connected");
+
+ await createSuperAdmin();
+
+})
 .catch(err=>console.log("❌ Mongo Error:",err));
 
 
@@ -83,7 +89,26 @@ const spinSchema = new mongoose.Schema({
 
 const Spin = mongoose.model("Spin",spinSchema);
 
+// AUTO CREATE SUPERADMIN
+async function createSuperAdmin(){
 
+ const exist = await User.findOne({role:"superadmin"});
+
+ if(!exist){
+
+  const hash = await bcrypt.hash("admin123",10);
+
+  await User.create({
+   username:"admin",
+   password:hash,
+   role:"superadmin",
+   prefix:"CBPAABCC"
+  });
+
+  console.log("✅ Superadmin created");
+ }
+
+}
 /* ===================== PRIZE SETTINGS ===================== */
 
 const prizeSettingSchema = new mongoose.Schema({
